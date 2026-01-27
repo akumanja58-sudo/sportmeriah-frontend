@@ -1,0 +1,9 @@
+# https://www.robotstxt.org/robotstxt.html
+User-agent: *
+Allow: /
+
+# Sitemaps
+Sitemap: https://www.sportmeriah.com/sitemap.xml
+
+# Disallow admin/api routes
+Disallow: /api/
