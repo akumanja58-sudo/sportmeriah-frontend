@@ -334,7 +334,7 @@ export default function MatchPage() {
         return (
             <main className="min-h-screen bg-gray-900">
                 <Navbar />
-                <div className="container mx-auto px-4 py-8 text-center">
+                <div className="flex flex-col items-center justify-center min-h-[60vh]">
                     <div className="flex justify-center mb-4">
                         <span className="loader"></span>
                     </div>
@@ -469,67 +469,67 @@ export default function MatchPage() {
                             <div className="absolute inset-0 bg-gradient-to-b from-gray-800 to-gray-900 opacity-90"></div>
 
                             {/* Content */}
-                            <div className="absolute inset-0 flex flex-col justify-center items-center text-center p-4">
+                            <div className="absolute inset-0 flex flex-col justify-center items-center text-center p-2 sm:p-4">
 
                                 {/* Team Logos + Match Title */}
-                                {parsed?.homeLogo || parsed?.awayLogo ? (
-                                    <div className="flex items-center justify-center gap-4 mb-4">
-                                        <div className="text-center">
+                                {parsed?.isValid ? (
+                                    <div className="flex items-center justify-center gap-2 sm:gap-4 mb-2 sm:mb-4">
+                                        <div className="text-center flex-1 max-w-[120px]">
                                             {parsed.homeLogo ? (
                                                 <img
                                                     src={parsed.homeLogo}
                                                     alt={parsed.homeTeam}
-                                                    className="w-16 h-16 sm:w-20 sm:h-20 object-contain mx-auto mb-2"
+                                                    className="w-10 h-10 sm:w-16 sm:h-16 md:w-20 md:h-20 object-contain mx-auto mb-1 sm:mb-2"
                                                     onError={(e) => e.target.style.display = 'none'}
                                                 />
                                             ) : (
-                                                <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-2">
-                                                    <span className="text-3xl">⚽</span>
+                                                <div className="w-10 h-10 sm:w-16 sm:h-16 md:w-20 md:h-20 bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-1 sm:mb-2">
+                                                    <span className="text-xl sm:text-3xl">⚽</span>
                                                 </div>
                                             )}
-                                            <p className="text-white font-semibold text-sm sm:text-base">{parsed.homeTeam}</p>
+                                            <p className="text-white font-semibold text-xs sm:text-sm md:text-base truncate">{parsed.homeTeam}</p>
                                         </div>
-                                        <div className="text-2xl sm:text-4xl font-bold text-gray-400">VS</div>
-                                        <div className="text-center">
+                                        <div className="text-lg sm:text-2xl md:text-4xl font-bold text-gray-400 px-1">VS</div>
+                                        <div className="text-center flex-1 max-w-[120px]">
                                             {parsed.awayLogo ? (
                                                 <img
                                                     src={parsed.awayLogo}
                                                     alt={parsed.awayTeam}
-                                                    className="w-16 h-16 sm:w-20 sm:h-20 object-contain mx-auto mb-2"
+                                                    className="w-10 h-10 sm:w-16 sm:h-16 md:w-20 md:h-20 object-contain mx-auto mb-1 sm:mb-2"
                                                     onError={(e) => e.target.style.display = 'none'}
                                                 />
                                             ) : (
-                                                <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-2">
-                                                    <span className="text-3xl">⚽</span>
+                                                <div className="w-10 h-10 sm:w-16 sm:h-16 md:w-20 md:h-20 bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-1 sm:mb-2">
+                                                    <span className="text-xl sm:text-3xl">⚽</span>
                                                 </div>
                                             )}
-                                            <p className="text-white font-semibold text-sm sm:text-base">{parsed.awayTeam}</p>
+                                            <p className="text-white font-semibold text-xs sm:text-sm md:text-base truncate">{parsed.awayTeam}</p>
                                         </div>
                                     </div>
                                 ) : (
-                                    <h2 className="text-xl sm:text-3xl font-bold text-white mb-2">
+                                    <h2 className="text-lg sm:text-xl md:text-3xl font-bold text-white mb-2 px-2">
                                         {parsed?.cleanTitle || channel?.name}
                                     </h2>
                                 )}
 
                                 {parsed?.league && (
-                                    <p className="text-gray-400 mb-4">{parsed.league}</p>
+                                    <p className="text-gray-400 text-xs sm:text-sm mb-2 sm:mb-4">{parsed.league}</p>
                                 )}
 
                                 {/* Schedule & Countdown */}
-                                <div className="mb-6">
+                                <div className="mb-3 sm:mb-6">
                                     {parsed?.kickoffDate && (
-                                        <p className="text-gray-400 text-sm mb-1">{parsed.kickoffDate}</p>
+                                        <p className="text-gray-400 text-xs sm:text-sm mb-0.5 sm:mb-1">{parsed.kickoffDate}</p>
                                     )}
                                     {parsed?.kickoffDisplay && (
-                                        <p className="text-base text-gray-300 mb-2">Kickoff: {parsed.kickoffDisplay}</p>
+                                        <p className="text-xs sm:text-base text-gray-300 mb-1 sm:mb-2">Kickoff: {parsed.kickoffDisplay}</p>
                                     )}
                                     {matchLive ? (
-                                        <div className="text-3xl font-bold text-red-500 animate-pulse">
+                                        <div className="text-xl sm:text-3xl font-bold text-red-500 animate-pulse">
                                             LIVE NOW
                                         </div>
                                     ) : (
-                                        <div className="text-3xl font-bold text-white">
+                                        <div className="text-xl sm:text-3xl font-bold text-white">
                                             {countdown}
                                         </div>
                                     )}
@@ -543,17 +543,19 @@ export default function MatchPage() {
                                             startStream();
                                         }}
                                         disabled={streamLoading}
-                                        className="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded-full text-lg shadow-lg transition-all transform hover:scale-105 flex items-center gap-2 disabled:opacity-50 disabled:cursor-wait"
+                                        className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 sm:py-3 sm:px-8 rounded-full text-sm sm:text-lg shadow-lg transition-all transform hover:scale-105 flex items-center gap-2 disabled:opacity-50 disabled:cursor-wait"
                                     >
                                         {streamLoading ? (
                                             <>
                                                 <span className="loader-small"></span>
-                                                Memuat Stream...
+                                                <span className="hidden sm:inline">Memuat Stream...</span>
+                                                <span className="sm:hidden">Loading...</span>
                                             </>
                                         ) : (
                                             <>
                                                 <FaPlay />
-                                                Start Watching
+                                                <span className="hidden sm:inline">Start Watching</span>
+                                                <span className="sm:hidden">Watch</span>
                                             </>
                                         )}
                                     </button>
@@ -561,13 +563,15 @@ export default function MatchPage() {
                                     <div className="text-center">
                                         <button
                                             disabled
-                                            className="bg-gray-600 text-gray-400 font-bold py-3 px-8 rounded-full text-lg cursor-not-allowed flex items-center gap-2 opacity-50"
+                                            className="bg-gray-600 text-gray-400 font-bold py-2 px-4 sm:py-3 sm:px-8 rounded-full text-sm sm:text-lg cursor-not-allowed flex items-center gap-2 opacity-50"
                                         >
                                             <FaPlay />
-                                            Menunggu Kickoff...
+                                            <span className="hidden sm:inline">Menunggu Kickoff...</span>
+                                            <span className="sm:hidden">Menunggu...</span>
                                         </button>
-                                        <p className="text-gray-500 text-sm mt-2">
-                                            Stream akan otomatis dimulai saat pertandingan dimulai
+                                        <p className="text-gray-500 text-xs sm:text-sm mt-1 sm:mt-2 px-2">
+                                            <span className="hidden sm:inline">Stream akan otomatis dimulai saat pertandingan dimulai</span>
+                                            <span className="sm:hidden">Auto-play saat kickoff</span>
                                         </p>
                                     </div>
                                 )}
@@ -592,10 +596,73 @@ export default function MatchPage() {
                 {/* ========== MATCH DETAILS ========== */}
                 <div className="flex flex-col">
 
-                    {/* Breadcrumb */}
-                    <div className="mb-2 text-sm text-gray-400 order-3 sm:order-1">
+                    {/* Title - Show first on mobile */}
+                    <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 sm:gap-4 mb-3 sm:mb-4 order-1">
+                        <div className="flex-grow min-w-0">
+                            <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-white mb-1 leading-tight">
+                                {parsed?.cleanTitle || channel?.name}
+                            </h1>
+                            <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm text-gray-400">
+                                {parsed?.kickoffDate && parsed?.kickoffDisplay && (
+                                    <span>{parsed.kickoffDate} - {parsed.kickoffDisplay}</span>
+                                )}
+                                {parsed?.league && (
+                                    <>
+                                        <span className="hidden sm:inline">•</span>
+                                        <span>{parsed.league}</span>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Share Buttons */}
+                    <div className="mb-3 sm:mb-4 flex flex-wrap items-center gap-2 sm:gap-3 order-2">
+                        <span className="text-xs sm:text-sm font-semibold text-gray-400">Share this match:</span>
+                        <div className="flex flex-wrap gap-2">
+                            <a
+                                href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-full bg-gray-700 text-gray-300 hover:bg-blue-600 hover:text-white transition-colors"
+                                title="Share on Facebook"
+                            >
+                                <FaFacebook size={16} />
+                            </a>
+                            <a
+                                href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl)}&text=${shareTitle}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-full bg-gray-700 text-gray-300 hover:bg-sky-500 hover:text-white transition-colors"
+                                title="Share on Twitter"
+                            >
+                                <FaTwitter size={16} />
+                            </a>
+                            <a
+                                href={`https://api.whatsapp.com/send?text=${shareTitle}%20${encodeURIComponent(shareUrl)}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-full bg-gray-700 text-gray-300 hover:bg-green-500 hover:text-white transition-colors"
+                                title="Share on WhatsApp"
+                            >
+                                <FaWhatsapp size={16} />
+                            </a>
+                            <a
+                                href={`https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${shareTitle}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-full bg-gray-700 text-gray-300 hover:bg-sky-600 hover:text-white transition-colors"
+                                title="Share on Telegram"
+                            >
+                                <FaTelegram size={16} />
+                            </a>
+                        </div>
+                    </div>
+
+                    {/* Breadcrumb - Show last on mobile */}
+                    <div className="mb-2 text-xs sm:text-sm text-gray-400 order-3">
                         <nav className="flex" aria-label="Breadcrumb">
-                            <ol className="inline-flex items-center space-x-1 md:space-x-2">
+                            <ol className="inline-flex items-center space-x-1">
                                 <li className="inline-flex items-center">
                                     <Link href="/" className="hover:text-white">Home</Link>
                                 </li>
@@ -608,74 +675,16 @@ export default function MatchPage() {
                                 <li aria-current="page">
                                     <div className="flex items-center">
                                         <span className="mx-1">/</span>
-                                        <span className="text-gray-500 capitalize truncate max-w-[200px]">{parsed?.cleanTitle}</span>
+                                        <span className="text-gray-500 capitalize truncate max-w-[120px] sm:max-w-[200px]">{parsed?.cleanTitle}</span>
                                     </div>
                                 </li>
                             </ol>
                         </nav>
                     </div>
-
-                    {/* Title */}
-                    <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-4 order-1 sm:order-2">
-                        <div className="flex-grow min-w-0 order-2 sm:order-1">
-                            <h1 className="text-xl sm:text-2xl font-bold text-white mb-1 truncate">
-                                {parsed?.cleanTitle || channel?.name}
-                            </h1>
-                            {parsed?.kickoffDate && parsed?.kickoffDisplay && (
-                                <p className="text-sm text-gray-400">{parsed.kickoffDate} - {parsed.kickoffDisplay}</p>
-                            )}
-                            {parsed?.league && (
-                                <p className="text-gray-400 mt-1 text-sm">{parsed.league}</p>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Share Buttons */}
-                    <div className="mb-4 flex flex-wrap items-center gap-3 order-2 sm:order-3">
-                        <span className="text-sm font-semibold text-gray-400">Share this match:</span>
-                        <div className="flex flex-wrap gap-2">
-                            <a
-                                href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="w-9 h-9 flex items-center justify-center rounded-full bg-gray-700 text-gray-300 hover:bg-blue-600 hover:text-white transition-colors"
-                                title="Share on Facebook"
-                            >
-                                <FaFacebook size={18} />
-                            </a>
-                            <a
-                                href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl)}&text=${shareTitle}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="w-9 h-9 flex items-center justify-center rounded-full bg-gray-700 text-gray-300 hover:bg-sky-500 hover:text-white transition-colors"
-                                title="Share on Twitter"
-                            >
-                                <FaTwitter size={18} />
-                            </a>
-                            <a
-                                href={`https://api.whatsapp.com/send?text=${shareTitle}%20${encodeURIComponent(shareUrl)}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="w-9 h-9 flex items-center justify-center rounded-full bg-gray-700 text-gray-300 hover:bg-green-500 hover:text-white transition-colors"
-                                title="Share on WhatsApp"
-                            >
-                                <FaWhatsapp size={18} />
-                            </a>
-                            <a
-                                href={`https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${shareTitle}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="w-9 h-9 flex items-center justify-center rounded-full bg-gray-700 text-gray-300 hover:bg-sky-600 hover:text-white transition-colors"
-                                title="Share on Telegram"
-                            >
-                                <FaTelegram size={18} />
-                            </a>
-                        </div>
-                    </div>
                 </div>
 
                 {/* ========== SEO DESCRIPTION ========== */}
-                <div className="mt-6 p-4 bg-gray-700 rounded-lg text-gray-300 text-sm space-y-2">
+                <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-gray-700 rounded-lg text-gray-300 text-xs sm:text-sm space-y-2">
                     <p>
                         Watch the <strong>{parsed?.cleanTitle || channel?.name}</strong> stream live and for free on SportMeriah.
                         {parsed?.kickoffDisplay && (
@@ -689,22 +698,22 @@ export default function MatchPage() {
 
                 {/* ========== OTHER LIVE MATCHES ========== */}
                 {otherLiveMatches.length > 0 && (
-                    <div className="mt-8 pt-6 border-t border-gray-700">
-                        <h3 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
+                    <div className="mt-6 sm:mt-8 pt-4 sm:pt-6 border-t border-gray-700">
+                        <h3 className="text-lg sm:text-xl font-semibold text-white mb-3 sm:mb-4 flex items-center gap-2">
                             <MdLiveTv className="text-red-500" />
                             Other Live Matches
                         </h3>
-                        <div className="space-y-3">
+                        <div className="space-y-2 sm:space-y-3">
                             {otherLiveMatches.map((ch) => (
                                 <Link
                                     key={ch.stream_id}
                                     href={`/match/${ch.stream_id}`}
-                                    className="block bg-gray-700 p-4 rounded-lg shadow-md transition-all hover:bg-gray-600 flex justify-between items-center"
+                                    className="block bg-gray-700 p-3 sm:p-4 rounded-lg shadow-md transition-all hover:bg-gray-600 flex justify-between items-center"
                                 >
-                                    <span className="text-base font-medium text-white truncate pr-4">
+                                    <span className="text-sm sm:text-base font-medium text-white truncate pr-4">
                                         {ch.parsed.cleanTitle}
                                     </span>
-                                    <span className="text-sm font-bold text-red-500 animate-pulse flex-shrink-0">
+                                    <span className="text-xs sm:text-sm font-bold text-red-500 animate-pulse flex-shrink-0">
                                         LIVE
                                     </span>
                                 </Link>
@@ -716,28 +725,29 @@ export default function MatchPage() {
             </div>
 
             {/* ========== BOTTOM NAV MOBILE ========== */}
-            <nav className="fixed bottom-0 left-0 right-0 bg-gray-900 border-t border-gray-700 z-50 md:hidden">
-                <div className="flex justify-around items-center py-2">
-                    <Link href="/" className="flex flex-col items-center px-4 py-2 text-gray-400 hover:text-white transition-colors">
-                        <IoHome size={24} />
-                        <span className="text-xs mt-1">Beranda</span>
+            <nav className="fixed bottom-0 left-0 right-0 bg-gray-900 border-t border-gray-700 z-50 md:hidden safe-area-bottom">
+                <div className="flex justify-around items-center py-2 px-1">
+                    <Link href="/" className="flex flex-col items-center px-2 sm:px-4 py-2 text-gray-400 hover:text-white transition-colors">
+                        <IoHome size={22} />
+                        <span className="text-[10px] sm:text-xs mt-1">Beranda</span>
                     </Link>
-                    <button className="flex flex-col items-center px-4 py-2 text-orange-400">
-                        <FaPlay size={20} />
-                        <span className="text-xs mt-1">Nonton</span>
+                    <button className="flex flex-col items-center px-2 sm:px-4 py-2 text-orange-400">
+                        <FaPlay size={18} />
+                        <span className="text-[10px] sm:text-xs mt-1">Nonton</span>
                     </button>
-                    <a href="https://t.me/sportmeriah" target="_blank" className="flex flex-col items-center px-4 py-2 text-gray-400 hover:text-blue-400 transition-colors">
-                        <FaTelegram size={24} />
-                        <span className="text-xs mt-1">Telegram</span>
+                    <a href="https://t.me/sportmeriah" target="_blank" className="flex flex-col items-center px-2 sm:px-4 py-2 text-gray-400 hover:text-blue-400 transition-colors">
+                        <FaTelegram size={22} />
+                        <span className="text-[10px] sm:text-xs mt-1">Telegram</span>
                     </a>
-                    <a href="https://wa.me/6281234567890" target="_blank" className="flex flex-col items-center px-4 py-2 text-gray-400 hover:text-green-400 transition-colors">
-                        <FaWhatsapp size={24} />
-                        <span className="text-xs mt-1">WhatsApp</span>
+                    <a href="https://wa.me/6281234567890" target="_blank" className="flex flex-col items-center px-2 sm:px-4 py-2 text-gray-400 hover:text-green-400 transition-colors">
+                        <FaWhatsapp size={22} />
+                        <span className="text-[10px] sm:text-xs mt-1">WhatsApp</span>
                     </a>
                 </div>
             </nav>
 
-            <div className="h-16 md:hidden"></div>
+            {/* Bottom padding for mobile nav */}
+            <div className="h-20 md:hidden"></div>
         </main>
     );
 }

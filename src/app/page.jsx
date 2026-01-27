@@ -503,28 +503,28 @@ export default function Home() {
 
             {/* ========== BOTTOM NAV MOBILE ========== */}
             <nav className="fixed bottom-0 left-0 right-0 bg-gray-900 border-t border-gray-700 z-50 md:hidden">
-                <div className="flex justify-around items-center py-2">
-                    <Link href="/" className="flex flex-col items-center px-4 py-2 text-orange-400">
-                        <IoHome size={24} />
-                        <span className="text-xs mt-1">Beranda</span>
+                <div className="flex justify-around items-center py-2 px-1">
+                    <Link href="/" className="flex flex-col items-center px-2 sm:px-4 py-2 text-orange-400">
+                        <IoHome size={22} />
+                        <span className="text-[10px] sm:text-xs mt-1">Beranda</span>
                     </Link>
-                    <Link href="/jadwal" className="flex flex-col items-center px-4 py-2 text-gray-400 hover:text-white transition-colors">
-                        <IoCalendar size={24} />
-                        <span className="text-xs mt-1">Jadwal</span>
+                    <Link href="/jadwal" className="flex flex-col items-center px-2 sm:px-4 py-2 text-gray-400 hover:text-white transition-colors">
+                        <IoCalendar size={22} />
+                        <span className="text-[10px] sm:text-xs mt-1">Jadwal</span>
                     </Link>
-                    <a href="https://t.me/sportmeriah" target="_blank" className="flex flex-col items-center px-4 py-2 text-gray-400 hover:text-blue-400 transition-colors">
-                        <FaTelegram size={24} />
-                        <span className="text-xs mt-1">Telegram</span>
+                    <a href="https://t.me/sportmeriah" target="_blank" className="flex flex-col items-center px-2 sm:px-4 py-2 text-gray-400 hover:text-blue-400 transition-colors">
+                        <FaTelegram size={22} />
+                        <span className="text-[10px] sm:text-xs mt-1">Telegram</span>
                     </a>
-                    <a href="https://wa.me/6281234567890" target="_blank" className="flex flex-col items-center px-4 py-2 text-gray-400 hover:text-green-400 transition-colors">
-                        <FaWhatsapp size={24} />
-                        <span className="text-xs mt-1">WhatsApp</span>
+                    <a href="https://wa.me/6281234567890" target="_blank" className="flex flex-col items-center px-2 sm:px-4 py-2 text-gray-400 hover:text-green-400 transition-colors">
+                        <FaWhatsapp size={22} />
+                        <span className="text-[10px] sm:text-xs mt-1">WhatsApp</span>
                     </a>
                 </div>
             </nav>
 
             {/* Padding bottom untuk mobile nav */}
-            <div className="h-16 md:hidden"></div>
+            <div className="h-20 md:hidden"></div>
         </main>
     );
 }
@@ -535,65 +535,75 @@ function MatchCard({ channel, isLive }) {
 
     return (
         <Link href={`/match/${channel.stream_id}`}>
-            <div className="flex items-center justify-between bg-gray-700 p-3 rounded-lg hover:bg-gray-600 transition-colors cursor-pointer group">
+            <div className="bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors cursor-pointer group overflow-hidden">
 
-                {/* Waktu / Status */}
-                <div className="flex-shrink-0 w-28">
-                    {isLive ? (
-                        <span className="text-xs text-green-400 font-medium flex items-center gap-1">
-                            <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-                            LIVE
-                        </span>
-                    ) : (
-                        <div className="text-xs">
-                            {parsed.kickoffDate && (
-                                <p className="text-gray-400 text-xs">{parsed.kickoffDate}</p>
-                            )}
-                            <p className="text-lg font-bold text-white">
-                                {parsed.kickoffDisplay || '--:--'}
-                            </p>
-                        </div>
-                    )}
-                    {parsed.league && (
-                        <p className="text-gray-500 text-xs mt-1 truncate">{parsed.league}</p>
-                    )}
+                {/* Header - Date & League */}
+                <div className="flex justify-between items-center px-3 py-1.5 bg-gray-800 text-[10px] sm:text-xs">
+                    <span className="text-gray-400">
+                        {parsed.kickoffDate ? `${parsed.kickoffDate.split(',')[1]?.trim() || parsed.kickoffDate}` : ''} - {parsed.kickoffDisplay || '--:--'}
+                    </span>
+                    <span className="text-gray-400 truncate max-w-[120px] sm:max-w-[200px]">
+                        {parsed.league || 'Football'}
+                    </span>
                 </div>
 
-                {/* Tim vs Tim */}
-                <div className="flex-1 text-center px-2">
-                    <div className="flex items-center justify-center gap-2 flex-wrap">
-                        <span className="text-white text-sm font-medium">{parsed.homeTeam}</span>
+                {/* Match Content */}
+                <div className="flex items-center justify-between px-3 py-2.5 gap-2">
+
+                    {/* Home Team */}
+                    <div className="flex items-center gap-2 flex-1 min-w-0 justify-end">
+                        <span className="text-white text-xs sm:text-sm font-medium truncate text-right">
+                            {parsed.homeTeam}
+                        </span>
                         {parsed.homeLogo ? (
                             <img
                                 src={parsed.homeLogo}
                                 alt={parsed.homeTeam}
-                                className="w-6 h-6 object-contain"
+                                className="w-6 h-6 sm:w-8 sm:h-8 object-contain flex-shrink-0"
                                 onError={(e) => e.target.style.display = 'none'}
                             />
                         ) : (
-                            <span className="text-lg">⚽</span>
+                            <span className="text-lg sm:text-xl flex-shrink-0">⚽</span>
                         )}
-                        <span className="text-gray-400 text-xs">vs</span>
+                    </div>
+
+                    {/* VS */}
+                    <div className="flex-shrink-0 px-2">
+                        <span className="text-gray-400 text-xs sm:text-sm font-bold">VS</span>
+                    </div>
+
+                    {/* Away Team */}
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
                         {parsed.awayLogo ? (
                             <img
                                 src={parsed.awayLogo}
                                 alt={parsed.awayTeam}
-                                className="w-6 h-6 object-contain"
+                                className="w-6 h-6 sm:w-8 sm:h-8 object-contain flex-shrink-0"
                                 onError={(e) => e.target.style.display = 'none'}
                             />
                         ) : (
-                            <span className="text-lg">⚽</span>
+                            <span className="text-lg sm:text-xl flex-shrink-0">⚽</span>
                         )}
-                        <span className="text-white text-sm font-medium">{parsed.awayTeam}</span>
+                        <span className="text-white text-xs sm:text-sm font-medium truncate">
+                            {parsed.awayTeam}
+                        </span>
+                    </div>
+
+                    {/* Tombol Tonton */}
+                    <div className="flex-shrink-0 ml-2">
+                        <span className="bg-orange-500 text-white text-[10px] sm:text-xs font-bold px-2.5 sm:px-3 py-1.5 rounded group-hover:bg-orange-600 transition-colors inline-flex items-center gap-1">
+                            Tonton
+                        </span>
                     </div>
                 </div>
 
-                {/* Tombol Tonton */}
-                <div className="flex-shrink-0">
-                    <span className="bg-orange-500 text-white text-xs font-bold px-3 py-1.5 rounded-full group-hover:bg-orange-600 transition-colors inline-flex items-center gap-1">
-                        Tonton <span>▶</span>
-                    </span>
-                </div>
+                {/* Live Badge */}
+                {isLive && (
+                    <div className="absolute top-0 left-0 bg-red-600 text-white text-[10px] px-2 py-0.5 rounded-br font-bold flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse"></span>
+                        LIVE
+                    </div>
+                )}
             </div>
         </Link>
     );
