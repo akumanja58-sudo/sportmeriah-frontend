@@ -4,7 +4,7 @@ import './globals.css';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata = {
-    metadataBase: new URL('https://sportmeriah.com'),
+    metadataBase: new URL('https://www.sportmeriah.com'),
     title: {
         default: 'SportMeriah - Nonton Streaming Bola & Olahraga Gratis',
         template: '%s | SportMeriah'
@@ -42,7 +42,7 @@ export const metadata = {
     openGraph: {
         type: 'website',
         locale: 'id_ID',
-        url: 'https://sportmeriah.com',
+        url: 'https://www.sportmeriah.com',
         siteName: 'SportMeriah',
         title: 'SportMeriah - Nonton Streaming Bola & Olahraga Gratis',
         description: 'Nonton live streaming bola dan olahraga gratis. Premier League, La Liga, Serie A, Champions League, dan liga top dunia lainnya. Kualitas HD!',
@@ -66,7 +66,7 @@ export const metadata = {
         google: 'google-site-verification-code', // Ganti dengan code dari Google Search Console
     },
     alternates: {
-        canonical: 'https://sportmeriah.com',
+        canonical: 'https://www.sportmeriah.com/',
     },
     icons: {
         icon: '/sportmeriah-icon.ico',

@@ -50,7 +50,7 @@ export async function generateMetadata({ params }) {
       openGraph: {
         title: `${title} | SportMeriah`,
         description,
-        url: `https://sportmeriah.com/match/${id}`,
+        url: `https://www.sportmeriah.com/match/${id}`,
         siteName: 'SportMeriah',
         type: 'video.other',
         images: [
@@ -69,7 +69,7 @@ export async function generateMetadata({ params }) {
         images: ['/sportmeriah-icon.png'],
       },
       alternates: {
-        canonical: `https://sportmeriah.com/match/${id}`,
+        canonical: `https://www.sportmeriah.com/match/${id}`,
       },
     };
   } catch (error) {
