@@ -13,6 +13,7 @@ import { MdLiveTv } from 'react-icons/md';
 
 const API_URL = 'https://sportmeriah-backend-production.up.railway.app';
 const VPS_IP = '173.249.27.15';
+const SITE_URL = 'https://sportmeriah.com';
 
 // Banner images
 const BANNERS = [
@@ -195,11 +196,34 @@ export default function MatchPage() {
     const [showPlayer, setShowPlayer] = useState(false);
     const [countdown, setCountdown] = useState('--:--:--');
     const [parsed, setParsed] = useState(null);
-    const [canWatch, setCanWatch] = useState(false); // Can user click watch button?
+    const [canWatch, setCanWatch] = useState(false);
+    const [streamUrl, setStreamUrl] = useState(null);
+    const [streamLoading, setStreamLoading] = useState(false);
 
     useEffect(() => {
         fetchChannel();
     }, [params.id]);
+
+    // Function to start stream
+    const startStream = async () => {
+        try {
+            setStreamLoading(true);
+            const res = await fetch(`${API_URL}/api/streams/start/${params.id}`);
+            const data = await res.json();
+
+            if (data.success && data.stream_url) {
+                setStreamUrl(data.stream_url);
+                setShowPlayer(true);
+            }
+        } catch (error) {
+            console.error('Failed to start stream:', error);
+            // Fallback to direct URL
+            setStreamUrl(`http://${VPS_IP}/hls/${params.id}.m3u8`);
+            setShowPlayer(true);
+        } finally {
+            setStreamLoading(false);
+        }
+    };
 
     const fetchChannel = async () => {
         try {
@@ -231,8 +255,8 @@ export default function MatchPage() {
 
                 // Auto show player if match is live
                 if (parsedData.kickoffWIB && isMatchLive(parsedData.kickoffWIB)) {
-                    setShowPlayer(true);
                     setCanWatch(true);
+                    startStream(); // Auto start stream
                 }
             }
         } catch (error) {
@@ -257,7 +281,7 @@ export default function MatchPage() {
             if (diff <= 0) {
                 setCountdown('LIVE NOW');
                 setCanWatch(true);
-                setShowPlayer(true); // Auto play stream
+                startStream(); // Auto start stream
                 return true; // Stop interval
             }
 
@@ -290,8 +314,6 @@ export default function MatchPage() {
 
         return () => clearInterval(interval);
     }, [parsed]);
-
-    const streamUrl = `http://${VPS_IP}/hls/${params.id}.m3u8`;
 
     // Check if match is still relevant
     const matchRelevant = parsed ? isMatchRelevant(parsed.kickoffWIB) : true;
@@ -341,6 +363,17 @@ export default function MatchPage() {
                             border-left: 4px solid #FF3D00;
                             border-bottom: 4px solid transparent;
                             animation: rotation 0.5s linear infinite reverse;
+                        }
+                        .loader-small {
+                            width: 20px;
+                            height: 20px;
+                            border-radius: 50%;
+                            display: inline-block;
+                            position: relative;
+                            border-top: 3px solid #FFF;
+                            border-right: 3px solid transparent;
+                            box-sizing: border-box;
+                            animation: rotation 1s linear infinite;
                         }
                         @keyframes rotation {
                             0% { transform: rotate(0deg); }
@@ -430,7 +463,7 @@ export default function MatchPage() {
                         /* Pre-game Overlay */
                         <div
                             className={`bg-black rounded-lg aspect-video w-full overflow-hidden shadow-2xl relative ${canWatch ? 'cursor-pointer' : 'cursor-not-allowed'}`}
-                            onClick={() => canWatch && setShowPlayer(true)}
+                            onClick={() => canWatch && startStream()}
                         >
                             {/* Background gradient */}
                             <div className="absolute inset-0 bg-gradient-to-b from-gray-800 to-gray-900 opacity-90"></div>
@@ -507,12 +540,22 @@ export default function MatchPage() {
                                     <button
                                         onClick={(e) => {
                                             e.stopPropagation();
-                                            setShowPlayer(true);
+                                            startStream();
                                         }}
-                                        className="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded-full text-lg shadow-lg transition-all transform hover:scale-105 flex items-center gap-2"
+                                        disabled={streamLoading}
+                                        className="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded-full text-lg shadow-lg transition-all transform hover:scale-105 flex items-center gap-2 disabled:opacity-50 disabled:cursor-wait"
                                     >
-                                        <FaPlay />
-                                        Start Watching
+                                        {streamLoading ? (
+                                            <>
+                                                <span className="loader-small"></span>
+                                                Memuat Stream...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <FaPlay />
+                                                Start Watching
+                                            </>
+                                        )}
                                     </button>
                                 ) : (
                                     <div className="text-center">
