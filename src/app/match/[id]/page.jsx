@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import Navbar from '../../components/Navbar';
 import VideoPlayer from '../../components/VideoPlayer';
 import Link from 'next/link';
@@ -22,334 +22,130 @@ const BANNERS = [
     { id: 3, src: 'https://inigambarku.site/images/2026/01/20/promo-girang4d.gif', link: '#' },
 ];
 
-// ========== PARSE IPTV CHANNEL NAME ==========
-function parseChannelName(channelName) {
-    let result = {
-        homeTeam: '',
-        awayTeam: '',
-        league: '',
-        kickoffWIB: null,
-        kickoffDisplay: '',
-        kickoffDate: '',
-        cleanTitle: channelName,
-        isValid: false,
-        homeLogo: null,
-        awayLogo: null
-    };
-
-    // Day names in Indonesian
-    const dayNames = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
-    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
-
-    try {
-        // Remove prefix like "USA Soccer01: " or "USA Soccer02: "
-        let cleaned = channelName.replace(/^USA\s*Soccer\d*:\s*/i, '');
-
-        // Try to extract time @ HH:MMam/pm EST
-        const timeMatch = cleaned.match(/@\s*(\d{1,2}):(\d{2})\s*(am|pm)\s*EST/i);
-
-        if (timeMatch) {
-            let hours = parseInt(timeMatch[1]);
-            const minutes = parseInt(timeMatch[2]);
-            const period = timeMatch[3].toLowerCase();
-
-            // Convert to 24h format
-            if (period === 'pm' && hours !== 12) hours += 12;
-            if (period === 'am' && hours === 12) hours = 0;
-
-            // EST to WIB = +12 hours
-            let wibHours = hours + 12;
-            let dayOffset = 0;
-            if (wibHours >= 24) {
-                wibHours -= 24;
-                dayOffset = 1;
-            }
-
-            // Create kickoff date
-            const now = new Date();
-            const kickoff = new Date(now);
-            kickoff.setHours(wibHours, minutes, 0, 0);
-
-            // If kickoff already passed today, assume it's tomorrow (or add dayOffset)
-            if (kickoff < now && dayOffset === 0) {
-                kickoff.setDate(kickoff.getDate() + 1);
-            } else if (dayOffset === 1) {
-                kickoff.setDate(kickoff.getDate() + 1);
-            }
-
-            result.kickoffWIB = kickoff;
-            result.kickoffDisplay = `${String(wibHours).padStart(2, '0')}:${String(minutes).padStart(2, '0')} WIB`;
-
-            // Format date: "Rabu, 29 Jan"
-            const dayName = dayNames[kickoff.getDay()];
-            const date = kickoff.getDate();
-            const monthName = monthNames[kickoff.getMonth()];
-            result.kickoffDate = `${dayName}, ${date} ${monthName}`;
-
-            // Remove time from cleaned string
-            cleaned = cleaned.replace(/@\s*\d{1,2}:\d{2}\s*(am|pm)\s*EST/i, '').trim();
-        }
-
-        // Try to parse "Country - League : Team1 vs Team2"
-        const vsMatch = cleaned.match(/(.+?)\s+vs\s+(.+)/i);
-
-        if (vsMatch) {
-            let beforeVs = vsMatch[1].trim();
-            result.awayTeam = vsMatch[2].trim();
-
-            // Check if there's league info before team name
-            const leagueMatch = beforeVs.match(/^(.+?)\s*:\s*(.+)$/);
-
-            if (leagueMatch) {
-                result.league = leagueMatch[1].trim();
-                result.homeTeam = leagueMatch[2].trim();
-
-                // Clean league - remove country prefix if exists
-                const countryLeagueMatch = result.league.match(/^.+?\s*-\s*(.+)$/);
-                if (countryLeagueMatch) {
-                    result.league = countryLeagueMatch[1].trim();
-                }
-            } else {
-                result.homeTeam = beforeVs;
-            }
-
-            result.cleanTitle = `${result.homeTeam} vs ${result.awayTeam}`;
-            result.isValid = true;
-        } else {
-            result.cleanTitle = cleaned || channelName;
-        }
-
-    } catch (e) {
-        console.error('Error parsing channel name:', e);
-    }
-
-    return result;
+// ========== STATUS HELPERS ==========
+function isLiveStatus(status) {
+    const liveStatuses = ['1H', '2H', 'HT', 'ET', 'P', 'LIVE', 'BT'];
+    return liveStatuses.includes(status);
 }
 
-// ========== FETCH TEAM LOGO FROM API-FOOTBALL ==========
-async function fetchTeamLogo(teamName, apiUrl) {
-    try {
-        const res = await fetch(`${apiUrl}/api/football/today`);
-        const data = await res.json();
-
-        if (!data.response) return null;
-
-        const teamNameLower = teamName.toLowerCase();
-        const teamWords = teamNameLower.split(' ').filter(w => w.length >= 3);
-
-        for (const match of data.response) {
-            const homeName = match.teams.home.name.toLowerCase();
-            const awayName = match.teams.away.name.toLowerCase();
-
-            // Check home team
-            const homeMatches = teamWords.some(word => homeName.includes(word)) ||
-                homeName.split(' ').some(word => word.length >= 3 && teamNameLower.includes(word));
-            if (homeMatches) return match.teams.home.logo;
-
-            // Check away team
-            const awayMatches = teamWords.some(word => awayName.includes(word)) ||
-                awayName.split(' ').some(word => word.length >= 3 && teamNameLower.includes(word));
-            if (awayMatches) return match.teams.away.logo;
-        }
-
-        return null;
-    } catch (error) {
-        console.error('Failed to fetch team logo:', error);
-        return null;
-    }
+function isFinishedStatus(status) {
+    const finishedStatuses = ['FT', 'AET', 'PEN', 'AWD', 'WO'];
+    return finishedStatuses.includes(status);
 }
 
-// ========== CHECK IF MATCH IS STILL RELEVANT ==========
-function isMatchRelevant(kickoffWIB) {
-    if (!kickoffWIB) return true;
-
-    const now = new Date();
-    const kickoff = new Date(kickoffWIB);
-    const MATCH_DURATION_MS = 4 * 60 * 60 * 1000;
-
-    if (kickoff > now) return true;
-
-    const timeSinceKickoff = now - kickoff;
-    if (timeSinceKickoff < MATCH_DURATION_MS) return true;
-
-    return false;
-}
-
-// ========== CHECK IF MATCH IS LIVE ==========
-function isMatchLive(kickoffWIB) {
-    if (!kickoffWIB) return false;
-
-    const now = new Date();
-    const kickoff = new Date(kickoffWIB);
-    const LIVE_WINDOW_MS = 2.5 * 60 * 60 * 1000;
-
-    const timeSinceKickoff = now - kickoff;
-
-    return timeSinceKickoff >= 0 && timeSinceKickoff < LIVE_WINDOW_MS;
+// ========== FORMAT TIME ==========
+function formatKickoffTime(dateString) {
+    const date = new Date(dateString);
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    return `${hours}:${minutes} WIB`;
 }
 
 export default function MatchPage() {
     const params = useParams();
-    const [channel, setChannel] = useState(null);
-    const [allChannels, setAllChannels] = useState([]);
+    const searchParams = useSearchParams();
+
+    const fixtureId = params.id;
+    const streamIdFromUrl = searchParams.get('stream');
+
+    const [fixture, setFixture] = useState(null);
+    const [allFixtures, setAllFixtures] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showPlayer, setShowPlayer] = useState(false);
-    const [countdown, setCountdown] = useState('--:--:--');
-    const [parsed, setParsed] = useState(null);
-    const [canWatch, setCanWatch] = useState(false);
     const [streamUrl, setStreamUrl] = useState(null);
     const [streamLoading, setStreamLoading] = useState(false);
 
     useEffect(() => {
-        fetchChannel();
-    }, [params.id]);
+        fetchFixture();
 
-    // Function to start stream
-    const startStream = async () => {
+        // Refresh setiap 30 detik untuk update skor
+        const interval = setInterval(fetchFixture, 30000);
+        return () => clearInterval(interval);
+    }, [fixtureId]);
+
+    const fetchFixture = async () => {
+        try {
+            const [fixtureRes, allRes] = await Promise.all([
+                fetch(`${API_URL}/api/fixtures/${fixtureId}`),
+                fetch(`${API_URL}/api/fixtures/today`)
+            ]);
+
+            const fixtureData = await fixtureRes.json();
+            const allData = await allRes.json();
+
+            if (fixtureData.success && fixtureData.fixture) {
+                setFixture(fixtureData.fixture);
+
+                // Auto start stream if LIVE and has stream
+                const hasStream = fixtureData.fixture.stream || streamIdFromUrl;
+                if (isLiveStatus(fixtureData.fixture.status.short) && hasStream && !showPlayer) {
+                    const sid = fixtureData.fixture.stream?.stream_id || streamIdFromUrl;
+                    startStream(sid);
+                }
+            }
+
+            if (allData.success && allData.fixtures) {
+                setAllFixtures(allData.fixtures);
+            }
+        } catch (error) {
+            console.error('Failed to fetch fixture:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const startStream = async (streamId) => {
+        if (!streamId) return;
+
         try {
             setStreamLoading(true);
-            const res = await fetch(`${API_URL}/api/streams/start/${params.id}`);
+            const res = await fetch(`${API_URL}/api/streams/start/${streamId}`);
             const data = await res.json();
 
             if (data.success && data.stream_url) {
                 setStreamUrl(data.stream_url);
                 setShowPlayer(true);
+            } else {
+                setStreamUrl(`http://${VPS_IP}/hls/${streamId}.m3u8`);
+                setShowPlayer(true);
             }
         } catch (error) {
             console.error('Failed to start stream:', error);
-            // Fallback to direct URL
-            setStreamUrl(`http://${VPS_IP}/hls/${params.id}.m3u8`);
+            setStreamUrl(`http://${VPS_IP}/hls/${streamId}.m3u8`);
             setShowPlayer(true);
         } finally {
             setStreamLoading(false);
         }
     };
 
-    const fetchChannel = async () => {
-        try {
-            const [channelRes, allRes] = await Promise.all([
-                fetch(`${API_URL}/api/matches/${params.id}`),
-                fetch(`${API_URL}/api/matches`)
-            ]);
-
-            const channelData = await channelRes.json();
-            const allData = await allRes.json();
-
-            setChannel(channelData);
-            setAllChannels(allData);
-
-            if (channelData?.name) {
-                const parsedData = parseChannelName(channelData.name);
-
-                // Fetch logos for home and away teams
-                if (parsedData.isValid) {
-                    const [homeLogo, awayLogo] = await Promise.all([
-                        fetchTeamLogo(parsedData.homeTeam, API_URL),
-                        fetchTeamLogo(parsedData.awayTeam, API_URL)
-                    ]);
-                    parsedData.homeLogo = homeLogo;
-                    parsedData.awayLogo = awayLogo;
-                }
-
-                setParsed(parsedData);
-
-                // Auto show player if match is live
-                if (parsedData.kickoffWIB && isMatchLive(parsedData.kickoffWIB)) {
-                    setCanWatch(true);
-                    startStream(); // Auto start stream
-                }
-            }
-        } catch (error) {
-            console.error('Failed to fetch channel:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    // Countdown timer with auto-play
-    useEffect(() => {
-        if (!parsed?.kickoffWIB) return;
-
-        const kickoffTime = new Date(parsed.kickoffWIB).getTime();
-        const FIVE_MINUTES = 5 * 60 * 1000; // 5 minutes in ms
-
-        const updateCountdown = () => {
-            const now = new Date().getTime();
-            const diff = kickoffTime - now;
-
-            // Countdown finished - AUTO PLAY!
-            if (diff <= 0) {
-                setCountdown('LIVE NOW');
-                setCanWatch(true);
-                startStream(); // Auto start stream
-                return true; // Stop interval
-            }
-
-            // Less than 5 minutes - enable watch button
-            if (diff <= FIVE_MINUTES) {
-                setCanWatch(true);
-            }
-
-            const d = Math.floor(diff / (1000 * 60 * 60 * 24));
-            const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-            const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-            const s = Math.floor((diff % (1000 * 60)) / 1000);
-
-            let countdownText = '';
-            if (d > 0) countdownText += `${d}d `;
-            countdownText += `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-            setCountdown(countdownText);
-
-            return false; // Continue interval
-        };
-
-        // Initial check
-        const shouldStop = updateCountdown();
-        if (shouldStop) return;
-
-        const interval = setInterval(() => {
-            const shouldStop = updateCountdown();
-            if (shouldStop) clearInterval(interval);
-        }, 1000);
-
-        return () => clearInterval(interval);
-    }, [parsed]);
-
-    // Check if match is still relevant
-    const matchRelevant = parsed ? isMatchRelevant(parsed.kickoffWIB) : true;
-    const matchLive = parsed ? isMatchLive(parsed.kickoffWIB) : false;
-
-    // Get other live matches
-    const otherLiveMatches = allChannels
-        .filter(ch => ch.stream_id !== parseInt(params.id))
-        .map(ch => ({ ...ch, parsed: parseChannelName(ch.name) }))
-        .filter(ch => ch.parsed.isValid && isMatchLive(ch.parsed.kickoffWIB))
-        .slice(0, 5);
-
     // Share URL
     const shareUrl = typeof window !== 'undefined' ? window.location.href : '';
-    const shareTitle = encodeURIComponent(parsed?.cleanTitle || 'SportMeriah');
+    const shareTitle = fixture ? encodeURIComponent(`${fixture.teams.home.name} vs ${fixture.teams.away.name}`) : 'SportMeriah';
+
+    // Get other live matches
+    const otherLiveMatches = allFixtures
+        .filter(f => f.id !== parseInt(fixtureId))
+        .filter(f => isLiveStatus(f.status.short) && f.stream)
+        .slice(0, 5);
 
     if (loading) {
         return (
             <main className="min-h-screen bg-gray-900">
                 <Navbar />
-                <div className="flex flex-col items-center justify-center min-h-[60vh]">
-                    <div className="flex justify-center mb-4">
-                        <span className="loader"></span>
-                    </div>
-                    <p className="text-gray-400">Loading...</p>
+                <div className="container max-w-6xl mx-auto px-4 py-6 flex flex-col items-center justify-center min-h-[60vh]">
+                    <span className="loader"></span>
+                    <p className="text-gray-400 mt-4">Memuat pertandingan...</p>
                     <style jsx>{`
                         .loader {
                             width: 48px;
                             height: 48px;
                             border-radius: 50%;
                             display: inline-block;
-                            position: relative;
                             border-top: 4px solid #FFF;
                             border-right: 4px solid transparent;
                             box-sizing: border-box;
                             animation: rotation 1s linear infinite;
+                            position: relative;
                         }
                         .loader::after {
                             content: '';
@@ -364,17 +160,6 @@ export default function MatchPage() {
                             border-bottom: 4px solid transparent;
                             animation: rotation 0.5s linear infinite reverse;
                         }
-                        .loader-small {
-                            width: 20px;
-                            height: 20px;
-                            border-radius: 50%;
-                            display: inline-block;
-                            position: relative;
-                            border-top: 3px solid #FFF;
-                            border-right: 3px solid transparent;
-                            box-sizing: border-box;
-                            animation: rotation 1s linear infinite;
-                        }
                         @keyframes rotation {
                             0% { transform: rotate(0deg); }
                             100% { transform: rotate(360deg); }
@@ -385,7 +170,7 @@ export default function MatchPage() {
         );
     }
 
-    if (!channel) {
+    if (!fixture) {
         return (
             <main className="min-h-screen bg-gray-900">
                 <Navbar />
@@ -404,8 +189,16 @@ export default function MatchPage() {
         );
     }
 
+    const { teams, league, status, goals, stream, date } = fixture;
+    const isLive = isLiveStatus(status.short);
+    const isFinished = isFinishedStatus(status.short);
+    const hasStream = !!stream || !!streamIdFromUrl;
+    const actualStreamId = stream?.stream_id || streamIdFromUrl;
+    const matchTitle = `${teams.home.name} vs ${teams.away.name}`;
+    const kickoffDisplay = formatKickoffTime(date);
+
     // Match finished
-    if (!matchRelevant) {
+    if (isFinished) {
         return (
             <main className="min-h-screen bg-gray-900">
                 <Navbar />
@@ -414,14 +207,17 @@ export default function MatchPage() {
                         <div className="text-6xl mb-4">⏰</div>
                         <h1 className="text-2xl font-bold text-white mb-2">Pertandingan Sudah Selesai</h1>
                         <p className="text-gray-400 mb-6">
-                            Pertandingan ini sudah berakhir atau tidak tersedia lagi untuk ditonton.
+                            Pertandingan ini sudah berakhir.
                         </p>
-                        {parsed && (
-                            <div className="bg-gray-700 rounded-lg p-4 mb-6">
-                                <p className="text-white font-semibold text-lg">{parsed.cleanTitle}</p>
-                                {parsed.league && <p className="text-gray-400 text-sm">{parsed.league}</p>}
+                        <div className="bg-gray-700 rounded-lg p-4 mb-6">
+                            <div className="flex items-center justify-center gap-4 mb-2">
+                                <img src={teams.home.logo} alt={teams.home.name} className="w-12 h-12 object-contain" />
+                                <span className="text-white text-2xl font-bold">{goals.home ?? 0} - {goals.away ?? 0}</span>
+                                <img src={teams.away.logo} alt={teams.away.name} className="w-12 h-12 object-contain" />
                             </div>
-                        )}
+                            <p className="text-white font-semibold text-lg">{matchTitle}</p>
+                            <p className="text-gray-400 text-sm">{league.name}</p>
+                        </div>
                         <Link
                             href="/"
                             className="inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-6 rounded-full transition-colors"
@@ -459,11 +255,61 @@ export default function MatchPage() {
 
                 {/* ========== PLAYER SECTION ========== */}
                 <div className="relative mb-4">
-                    {!showPlayer ? (
-                        /* Pre-game Overlay */
+                    {showPlayer && streamUrl ? (
+                        /* Video Player - LIVE */
+                        <div>
+                            {/* Live Badge */}
+                            <div className="bg-red-600 text-white px-4 py-2 rounded-t-lg flex items-center gap-2">
+                                <span className="w-2 h-2 bg-white rounded-full animate-pulse"></span>
+                                <span className="font-bold">{isLive ? (status.elapsed ? `${status.elapsed}'` : 'LIVE') : 'Playing'}</span>
+                                {isLive && <span className="font-bold ml-2">{goals.home ?? 0} - {goals.away ?? 0}</span>}
+                                <span className="ml-2 text-sm truncate">{matchTitle}</span>
+                            </div>
+                            <VideoPlayer streamUrl={streamUrl} />
+                        </div>
+                    ) : streamLoading ? (
+                        /* Loading Stream */
+                        <div className="bg-black rounded-lg aspect-video w-full overflow-hidden shadow-2xl relative flex items-center justify-center">
+                            <div className="text-center">
+                                <span className="loader"></span>
+                                <p className="text-white mt-4">Memuat Stream...</p>
+                            </div>
+                            <style jsx>{`
+                                .loader {
+                                    width: 48px;
+                                    height: 48px;
+                                    border-radius: 50%;
+                                    display: inline-block;
+                                    border-top: 4px solid #FFF;
+                                    border-right: 4px solid transparent;
+                                    box-sizing: border-box;
+                                    animation: rotation 1s linear infinite;
+                                    position: relative;
+                                }
+                                .loader::after {
+                                    content: '';
+                                    box-sizing: border-box;
+                                    position: absolute;
+                                    left: 0;
+                                    top: 0;
+                                    width: 48px;
+                                    height: 48px;
+                                    border-radius: 50%;
+                                    border-left: 4px solid #FF3D00;
+                                    border-bottom: 4px solid transparent;
+                                    animation: rotation 0.5s linear infinite reverse;
+                                }
+                                @keyframes rotation {
+                                    0% { transform: rotate(0deg); }
+                                    100% { transform: rotate(360deg); }
+                                }
+                            `}</style>
+                        </div>
+                    ) : isLive && hasStream ? (
+                        /* LIVE but not started yet - show play button */
                         <div
-                            className={`bg-black rounded-lg aspect-video w-full overflow-hidden shadow-2xl relative ${canWatch ? 'cursor-pointer' : 'cursor-not-allowed'}`}
-                            onClick={() => canWatch && startStream()}
+                            className="bg-black rounded-lg aspect-video w-full overflow-hidden shadow-2xl relative cursor-pointer"
+                            onClick={() => startStream(actualStreamId)}
                         >
                             {/* Background gradient */}
                             <div className="absolute inset-0 bg-gradient-to-b from-gray-800 to-gray-900 opacity-90"></div>
@@ -472,123 +318,102 @@ export default function MatchPage() {
                             <div className="absolute inset-0 flex flex-col justify-center items-center text-center p-2 sm:p-4">
 
                                 {/* Team Logos + Match Title */}
-                                {parsed?.isValid ? (
-                                    <div className="flex items-center justify-center gap-2 sm:gap-4 mb-2 sm:mb-4">
-                                        <div className="text-center flex-1 max-w-[120px]">
-                                            {parsed.homeLogo ? (
-                                                <img
-                                                    src={parsed.homeLogo}
-                                                    alt={parsed.homeTeam}
-                                                    className="w-10 h-10 sm:w-16 sm:h-16 md:w-20 md:h-20 object-contain mx-auto mb-1 sm:mb-2"
-                                                    onError={(e) => e.target.style.display = 'none'}
-                                                />
-                                            ) : (
-                                                <div className="w-10 h-10 sm:w-16 sm:h-16 md:w-20 md:h-20 bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-1 sm:mb-2">
-                                                    <span className="text-xl sm:text-3xl">⚽</span>
-                                                </div>
-                                            )}
-                                            <p className="text-white font-semibold text-xs sm:text-sm md:text-base truncate">{parsed.homeTeam}</p>
-                                        </div>
-                                        <div className="text-lg sm:text-2xl md:text-4xl font-bold text-gray-400 px-1">VS</div>
-                                        <div className="text-center flex-1 max-w-[120px]">
-                                            {parsed.awayLogo ? (
-                                                <img
-                                                    src={parsed.awayLogo}
-                                                    alt={parsed.awayTeam}
-                                                    className="w-10 h-10 sm:w-16 sm:h-16 md:w-20 md:h-20 object-contain mx-auto mb-1 sm:mb-2"
-                                                    onError={(e) => e.target.style.display = 'none'}
-                                                />
-                                            ) : (
-                                                <div className="w-10 h-10 sm:w-16 sm:h-16 md:w-20 md:h-20 bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-1 sm:mb-2">
-                                                    <span className="text-xl sm:text-3xl">⚽</span>
-                                                </div>
-                                            )}
-                                            <p className="text-white font-semibold text-xs sm:text-sm md:text-base truncate">{parsed.awayTeam}</p>
+                                <div className="flex items-center justify-center gap-2 sm:gap-4 mb-2 sm:mb-4">
+                                    <div className="text-center flex-1 max-w-[120px]">
+                                        <img
+                                            src={teams.home.logo}
+                                            alt={teams.home.name}
+                                            className="w-10 h-10 sm:w-16 sm:h-16 md:w-20 md:h-20 object-contain mx-auto mb-1 sm:mb-2"
+                                        />
+                                        <p className="text-white font-semibold text-xs sm:text-sm md:text-base truncate">{teams.home.name}</p>
+                                    </div>
+                                    <div className="text-center px-2">
+                                        <div className="text-white text-2xl sm:text-3xl font-bold mb-1">
+                                            {goals.home ?? 0} - {goals.away ?? 0}
                                         </div>
                                     </div>
-                                ) : (
-                                    <h2 className="text-lg sm:text-xl md:text-3xl font-bold text-white mb-2 px-2">
-                                        {parsed?.cleanTitle || channel?.name}
-                                    </h2>
-                                )}
+                                    <div className="text-center flex-1 max-w-[120px]">
+                                        <img
+                                            src={teams.away.logo}
+                                            alt={teams.away.name}
+                                            className="w-10 h-10 sm:w-16 sm:h-16 md:w-20 md:h-20 object-contain mx-auto mb-1 sm:mb-2"
+                                        />
+                                        <p className="text-white font-semibold text-xs sm:text-sm md:text-base truncate">{teams.away.name}</p>
+                                    </div>
+                                </div>
 
-                                {parsed?.league && (
-                                    <p className="text-gray-400 text-xs sm:text-sm mb-2 sm:mb-4">{parsed.league}</p>
-                                )}
-
-                                {/* Schedule & Countdown */}
-                                <div className="mb-3 sm:mb-6">
-                                    {parsed?.kickoffDate && (
-                                        <p className="text-gray-400 text-xs sm:text-sm mb-0.5 sm:mb-1">{parsed.kickoffDate}</p>
-                                    )}
-                                    {parsed?.kickoffDisplay && (
-                                        <p className="text-xs sm:text-base text-gray-300 mb-1 sm:mb-2">Kickoff: {parsed.kickoffDisplay}</p>
-                                    )}
-                                    {matchLive ? (
-                                        <div className="text-xl sm:text-3xl font-bold text-red-500 animate-pulse">
-                                            LIVE NOW
-                                        </div>
-                                    ) : (
-                                        <div className="text-xl sm:text-3xl font-bold text-white">
-                                            {countdown}
-                                        </div>
-                                    )}
+                                <div className="text-xl sm:text-3xl font-bold text-red-500 animate-pulse mb-4">
+                                    🔴 LIVE NOW
                                 </div>
 
                                 {/* Play Button */}
-                                {canWatch ? (
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            startStream();
-                                        }}
-                                        disabled={streamLoading}
-                                        className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 sm:py-3 sm:px-8 rounded-full text-sm sm:text-lg shadow-lg transition-all transform hover:scale-105 flex items-center gap-2 disabled:opacity-50 disabled:cursor-wait"
-                                    >
-                                        {streamLoading ? (
-                                            <>
-                                                <span className="loader-small"></span>
-                                                <span className="hidden sm:inline">Memuat Stream...</span>
-                                                <span className="sm:hidden">Loading...</span>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <FaPlay />
-                                                <span className="hidden sm:inline">Start Watching</span>
-                                                <span className="sm:hidden">Watch</span>
-                                            </>
-                                        )}
-                                    </button>
-                                ) : (
-                                    <div className="text-center">
-                                        <button
-                                            disabled
-                                            className="bg-gray-600 text-gray-400 font-bold py-2 px-4 sm:py-3 sm:px-8 rounded-full text-sm sm:text-lg cursor-not-allowed flex items-center gap-2 opacity-50"
-                                        >
-                                            <FaPlay />
-                                            <span className="hidden sm:inline">Menunggu Kickoff...</span>
-                                            <span className="sm:hidden">Menunggu...</span>
-                                        </button>
-                                        <p className="text-gray-500 text-xs sm:text-sm mt-1 sm:mt-2 px-2">
-                                            <span className="hidden sm:inline">Stream akan otomatis dimulai saat pertandingan dimulai</span>
-                                            <span className="sm:hidden">Auto-play saat kickoff</span>
-                                        </p>
-                                    </div>
-                                )}
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        startStream(actualStreamId);
+                                    }}
+                                    className="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 sm:py-4 sm:px-10 rounded-full text-lg sm:text-xl shadow-lg transition-all transform hover:scale-105 flex items-center gap-2"
+                                >
+                                    <FaPlay />
+                                    <span>Tonton Sekarang</span>
+                                </button>
                             </div>
                         </div>
                     ) : (
-                        /* Video Player */
-                        <div>
-                            {/* Live Badge */}
-                            {matchLive && (
-                                <div className="bg-red-600 text-white px-4 py-2 rounded-t-lg flex items-center gap-2">
-                                    <span className="w-2 h-2 bg-white rounded-full animate-pulse"></span>
-                                    <span className="font-bold">LIVE</span>
-                                    <span className="ml-2">{parsed?.cleanTitle}</span>
+                        /* UPCOMING - Show Info Only */
+                        <div className="bg-black rounded-lg aspect-video w-full overflow-hidden shadow-2xl relative">
+                            {/* Background gradient */}
+                            <div className="absolute inset-0 bg-gradient-to-b from-gray-800 to-gray-900 opacity-90"></div>
+
+                            {/* Content */}
+                            <div className="absolute inset-0 flex flex-col justify-center items-center text-center p-2 sm:p-4">
+
+                                {/* Team Logos + Match Title */}
+                                <div className="flex items-center justify-center gap-2 sm:gap-4 mb-2 sm:mb-4">
+                                    <div className="text-center flex-1 max-w-[120px]">
+                                        <img
+                                            src={teams.home.logo}
+                                            alt={teams.home.name}
+                                            className="w-10 h-10 sm:w-16 sm:h-16 md:w-20 md:h-20 object-contain mx-auto mb-1 sm:mb-2"
+                                        />
+                                        <p className="text-white font-semibold text-xs sm:text-sm md:text-base truncate">{teams.home.name}</p>
+                                    </div>
+                                    <div className="text-lg sm:text-2xl md:text-4xl font-bold text-gray-400 px-1">VS</div>
+                                    <div className="text-center flex-1 max-w-[120px]">
+                                        <img
+                                            src={teams.away.logo}
+                                            alt={teams.away.name}
+                                            className="w-10 h-10 sm:w-16 sm:h-16 md:w-20 md:h-20 object-contain mx-auto mb-1 sm:mb-2"
+                                        />
+                                        <p className="text-white font-semibold text-xs sm:text-sm md:text-base truncate">{teams.away.name}</p>
+                                    </div>
                                 </div>
-                            )}
-                            <VideoPlayer streamUrl={streamUrl} />
+
+                                <p className="text-gray-400 text-xs sm:text-sm mb-2 sm:mb-4">{league.name}</p>
+
+                                {/* Upcoming Status */}
+                                <div className="mb-3 sm:mb-6">
+                                    <div className="text-xl sm:text-2xl font-bold text-orange-400 mb-1">
+                                        ⏰ Upcoming
+                                    </div>
+                                    <p className="text-base sm:text-lg text-gray-300">Kickoff: {kickoffDisplay}</p>
+                                </div>
+
+                                {/* Info Message */}
+                                <div className="text-center">
+                                    <p className="text-gray-400 text-xs sm:text-sm px-4 mb-4">
+                                        {hasStream
+                                            ? 'Pertandingan belum dimulai. Stream akan tersedia saat match dimulai.'
+                                            : 'Pertandingan belum dimulai. Silakan kembali saat match sudah LIVE.'}
+                                    </p>
+                                    <Link
+                                        href="/"
+                                        className="inline-block bg-gray-700 hover:bg-gray-600 text-white font-medium py-2 px-6 rounded-full text-sm transition-colors"
+                                    >
+                                        ← Kembali ke Beranda
+                                    </Link>
+                                </div>
+                            </div>
                         </div>
                     )}
                 </div>
@@ -600,18 +425,12 @@ export default function MatchPage() {
                     <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 sm:gap-4 mb-3 sm:mb-4 order-1">
                         <div className="flex-grow min-w-0">
                             <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-white mb-1 leading-tight">
-                                {parsed?.cleanTitle || channel?.name}
+                                {matchTitle}
                             </h1>
                             <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm text-gray-400">
-                                {parsed?.kickoffDate && parsed?.kickoffDisplay && (
-                                    <span>{parsed.kickoffDate} - {parsed.kickoffDisplay}</span>
-                                )}
-                                {parsed?.league && (
-                                    <>
-                                        <span className="hidden sm:inline">•</span>
-                                        <span>{parsed.league}</span>
-                                    </>
-                                )}
+                                <span>{isLive ? '🔴 LIVE' : `Upcoming - ${kickoffDisplay}`}</span>
+                                <span className="hidden sm:inline">•</span>
+                                <span>{league.name}</span>
                             </div>
                         </div>
                     </div>
@@ -669,13 +488,13 @@ export default function MatchPage() {
                                 <li>
                                     <div className="flex items-center">
                                         <span className="mx-1">/</span>
-                                        <Link href="/football" className="capitalize hover:text-white">Football</Link>
+                                        <span className="capitalize hover:text-white">{league.name}</span>
                                     </div>
                                 </li>
                                 <li aria-current="page">
                                     <div className="flex items-center">
                                         <span className="mx-1">/</span>
-                                        <span className="text-gray-500 capitalize truncate max-w-[120px] sm:max-w-[200px]">{parsed?.cleanTitle}</span>
+                                        <span className="text-gray-500 capitalize truncate max-w-[120px] sm:max-w-[200px]">{matchTitle}</span>
                                     </div>
                                 </li>
                             </ol>
@@ -686,10 +505,8 @@ export default function MatchPage() {
                 {/* ========== SEO DESCRIPTION ========== */}
                 <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-gray-700 rounded-lg text-gray-300 text-xs sm:text-sm space-y-2">
                     <p>
-                        Watch the <strong>{parsed?.cleanTitle || channel?.name}</strong> stream live and for free on SportMeriah.
-                        {parsed?.kickoffDisplay && (
-                            <> This football match kickoff at <strong>{parsed.kickoffDisplay}</strong>.</>
-                        )}
+                        Watch the <strong>{matchTitle}</strong> stream live and for free on SportMeriah.
+                        This football match kickoff at <strong>{kickoffDisplay}</strong>.
                     </p>
                     <p>
                         Get the best quality stream and real-time updates right here. Don't miss any of the action!
@@ -704,14 +521,14 @@ export default function MatchPage() {
                             Other Live Matches
                         </h3>
                         <div className="space-y-2 sm:space-y-3">
-                            {otherLiveMatches.map((ch) => (
+                            {otherLiveMatches.map((f) => (
                                 <Link
-                                    key={ch.stream_id}
-                                    href={`/match/${ch.stream_id}`}
+                                    key={f.id}
+                                    href={`/match/${f.id}?stream=${f.stream.stream_id}`}
                                     className="block bg-gray-700 p-3 sm:p-4 rounded-lg shadow-md transition-all hover:bg-gray-600 flex justify-between items-center"
                                 >
                                     <span className="text-sm sm:text-base font-medium text-white truncate pr-4">
-                                        {ch.parsed.cleanTitle}
+                                        {f.teams.home.name} vs {f.teams.away.name}
                                     </span>
                                     <span className="text-xs sm:text-sm font-bold text-red-500 animate-pulse flex-shrink-0">
                                         LIVE

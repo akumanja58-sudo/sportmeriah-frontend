@@ -62,257 +62,61 @@ const BANNERS = [
     { id: 3, src: 'https://inigambarku.site/images/2026/01/20/promo-girang4d.gif', link: '#' },
 ];
 
-// ========== PARSE IPTV CHANNEL NAME ==========
-function parseChannelName(channelName) {
-    // Default values
-    let result = {
-        homeTeam: '',
-        awayTeam: '',
-        league: '',
-        kickoffWIB: null,
-        kickoffDisplay: '',
-        kickoffDate: '',
-        cleanTitle: channelName,
-        isValid: false,
-        homeLogo: null,
-        awayLogo: null
-    };
-
-    // Day names in Indonesian
-    const dayNames = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
-    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
-
-    try {
-        // Remove prefix like "USA Soccer01: " or "USA Soccer02: "
-        let cleaned = channelName.replace(/^USA\s*Soccer\d*:\s*/i, '');
-
-        // Try to extract time @ HH:MMam/pm EST
-        const timeMatch = cleaned.match(/@\s*(\d{1,2}):(\d{2})\s*(am|pm)\s*EST/i);
-
-        if (timeMatch) {
-            let hours = parseInt(timeMatch[1]);
-            const minutes = parseInt(timeMatch[2]);
-            const period = timeMatch[3].toLowerCase();
-
-            // Convert to 24h format
-            if (period === 'pm' && hours !== 12) hours += 12;
-            if (period === 'am' && hours === 12) hours = 0;
-
-            // EST to WIB = +12 hours
-            let wibHours = hours + 12;
-            let dayOffset = 0;
-            if (wibHours >= 24) {
-                wibHours -= 24;
-                dayOffset = 1;
-            }
-
-            // Create kickoff date
-            const now = new Date();
-            const kickoff = new Date(now);
-            kickoff.setHours(wibHours, minutes, 0, 0);
-
-            // If kickoff already passed today, assume it's tomorrow (or add dayOffset)
-            if (kickoff < now && dayOffset === 0) {
-                kickoff.setDate(kickoff.getDate() + 1);
-            } else if (dayOffset === 1) {
-                kickoff.setDate(kickoff.getDate() + 1);
-            }
-
-            result.kickoffWIB = kickoff;
-            result.kickoffDisplay = `${String(wibHours).padStart(2, '0')}:${String(minutes).padStart(2, '0')} WIB`;
-
-            // Format date: "Rabu, 29 Jan"
-            const dayName = dayNames[kickoff.getDay()];
-            const date = kickoff.getDate();
-            const monthName = monthNames[kickoff.getMonth()];
-            result.kickoffDate = `${dayName}, ${date} ${monthName}`;
-
-            // Remove time from cleaned string
-            cleaned = cleaned.replace(/@\s*\d{1,2}:\d{2}\s*(am|pm)\s*EST/i, '').trim();
-        }
-
-        // Try to parse "Country - League : Team1 vs Team2"
-        // Or "League : Team1 vs Team2"
-        // Or just "Team1 vs Team2"
-
-        const vsMatch = cleaned.match(/(.+?)\s+vs\s+(.+)/i);
-
-        if (vsMatch) {
-            let beforeVs = vsMatch[1].trim();
-            result.awayTeam = vsMatch[2].trim();
-
-            // Check if there's league info before team name
-            // Format: "Country - League : TeamName" or "League : TeamName"
-            const leagueMatch = beforeVs.match(/^(.+?)\s*:\s*(.+)$/);
-
-            if (leagueMatch) {
-                result.league = leagueMatch[1].trim();
-                result.homeTeam = leagueMatch[2].trim();
-
-                // Clean league - remove country prefix if exists
-                // "England - Premier League" → "Premier League"
-                const countryLeagueMatch = result.league.match(/^.+?\s*-\s*(.+)$/);
-                if (countryLeagueMatch) {
-                    result.league = countryLeagueMatch[1].trim();
-                }
-            } else {
-                result.homeTeam = beforeVs;
-            }
-
-            result.cleanTitle = `${result.homeTeam} vs ${result.awayTeam}`;
-            result.isValid = true;
-        } else {
-            // No "vs" found, just use cleaned name
-            result.cleanTitle = cleaned || channelName;
-        }
-
-    } catch (e) {
-        console.error('Error parsing channel name:', e);
-    }
-
-    return result;
+// ========== STATUS HELPERS ==========
+function isLiveStatus(status) {
+    const liveStatuses = ['1H', '2H', 'HT', 'ET', 'P', 'LIVE', 'BT'];
+    return liveStatuses.includes(status);
 }
 
-// ========== FETCH TEAM LOGOS FROM API-FOOTBALL ==========
-async function fetchTeamLogos(channels, apiUrl) {
-    try {
-        const res = await fetch(`${apiUrl}/api/football/today`);
-        const data = await res.json();
-
-        if (!data.response) return channels;
-
-        // Create a map of team names to logos
-        const teamLogos = {};
-        data.response.forEach(match => {
-            const homeName = match.teams.home.name.toLowerCase();
-            const awayName = match.teams.away.name.toLowerCase();
-            teamLogos[homeName] = match.teams.home.logo;
-            teamLogos[awayName] = match.teams.away.logo;
-        });
-
-        // Match logos to parsed channels
-        return channels.map(ch => {
-            if (!ch.parsed.isValid) return ch;
-
-            const homeTeamLower = ch.parsed.homeTeam.toLowerCase();
-            const awayTeamLower = ch.parsed.awayTeam.toLowerCase();
-
-            // Try exact match first
-            let homeLogo = teamLogos[homeTeamLower];
-            let awayLogo = teamLogos[awayTeamLower];
-
-            // Try partial match if exact not found
-            if (!homeLogo || !awayLogo) {
-                Object.keys(teamLogos).forEach(teamName => {
-                    // Check if team name contains or is contained in parsed name
-                    if (!homeLogo) {
-                        const homeWords = homeTeamLower.split(' ').filter(w => w.length >= 3);
-                        const matchesHome = homeWords.some(word => teamName.includes(word)) ||
-                            teamName.split(' ').some(word => word.length >= 3 && homeTeamLower.includes(word));
-                        if (matchesHome) homeLogo = teamLogos[teamName];
-                    }
-                    if (!awayLogo) {
-                        const awayWords = awayTeamLower.split(' ').filter(w => w.length >= 3);
-                        const matchesAway = awayWords.some(word => teamName.includes(word)) ||
-                            teamName.split(' ').some(word => word.length >= 3 && awayTeamLower.includes(word));
-                        if (matchesAway) awayLogo = teamLogos[teamName];
-                    }
-                });
-            }
-
-            return {
-                ...ch,
-                parsed: {
-                    ...ch.parsed,
-                    homeLogo,
-                    awayLogo
-                }
-            };
-        });
-    } catch (error) {
-        console.error('Failed to fetch team logos:', error);
-        return channels;
-    }
+function isFinishedStatus(status) {
+    const finishedStatuses = ['FT', 'AET', 'PEN', 'AWD', 'WO'];
+    return finishedStatuses.includes(status);
 }
 
-// ========== CHECK IF MATCH IS STILL RELEVANT ==========
-function isMatchRelevant(kickoffWIB) {
-    if (!kickoffWIB) return true; // If no time, show it anyway
-
-    const now = new Date();
-    const kickoff = new Date(kickoffWIB);
-
-    // Match duration buffer (4 hours after kickoff)
-    const MATCH_DURATION_MS = 4 * 60 * 60 * 1000;
-
-    // If kickoff is in the future → show
-    if (kickoff > now) return true;
-
-    // If kickoff was within last 4 hours → show (might still be live)
-    const timeSinceKickoff = now - kickoff;
-    if (timeSinceKickoff < MATCH_DURATION_MS) return true;
-
-    // Otherwise → don't show
-    return false;
+function isUpcomingStatus(status) {
+    return status === 'NS';
 }
 
-// ========== CHECK IF MATCH IS LIVE ==========
-function isMatchLive(kickoffWIB) {
-    if (!kickoffWIB) return false;
-
-    const now = new Date();
-    const kickoff = new Date(kickoffWIB);
-
-    // Match is live if: started (kickoff <= now) and within ~2.5 hours
-    const LIVE_WINDOW_MS = 2.5 * 60 * 60 * 1000;
-
-    const timeSinceKickoff = now - kickoff;
-
-    return timeSinceKickoff >= 0 && timeSinceKickoff < LIVE_WINDOW_MS;
+// ========== FORMAT TIME ==========
+function formatKickoffTime(dateString) {
+    const date = new Date(dateString);
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    return `${hours}:${minutes} WIB`;
 }
 
 export default function Home() {
-    const [channels, setChannels] = useState([]);
+    const [fixtures, setFixtures] = useState([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        fetchChannels();
+        fetchFixtures();
+
+        // Refresh setiap 60 detik untuk update status LIVE
+        const interval = setInterval(fetchFixtures, 60000);
+        return () => clearInterval(interval);
     }, []);
 
-    const fetchChannels = async () => {
+    const fetchFixtures = async () => {
         try {
-            const res = await fetch(`${API_URL}/api/matches`);
+            const res = await fetch(`${API_URL}/api/fixtures/today`);
             const data = await res.json();
 
-            // Parse and filter channels
-            let parsed = data
-                .map(ch => ({
-                    ...ch,
-                    parsed: parseChannelName(ch.name)
-                }))
-                .filter(ch => ch.parsed.isValid) // Only show valid matches with "vs"
-                .filter(ch => isMatchRelevant(ch.parsed.kickoffWIB)) // Only show relevant matches
-                .sort((a, b) => {
-                    // Sort by kickoff time
-                    if (a.parsed.kickoffWIB && b.parsed.kickoffWIB) {
-                        return new Date(a.parsed.kickoffWIB) - new Date(b.parsed.kickoffWIB);
-                    }
-                    return 0;
-                });
-
-            // Fetch team logos from API-Football
-            parsed = await fetchTeamLogos(parsed, API_URL);
-
-            setChannels(parsed);
+            if (data.success && data.fixtures) {
+                // Filter: hanya yang BELUM SELESAI (bukan FT)
+                const filtered = data.fixtures.filter(f => !isFinishedStatus(f.status.short));
+                setFixtures(filtered);
+            }
         } catch (error) {
-            console.error('Failed to fetch channels:', error);
+            console.error('Failed to fetch fixtures:', error);
         } finally {
             setLoading(false);
         }
     };
 
-    const liveMatches = channels.filter(ch => isMatchLive(ch.parsed.kickoffWIB));
-    const upcomingMatches = channels.filter(ch => !isMatchLive(ch.parsed.kickoffWIB));
+    // Separate LIVE and Upcoming
+    const liveMatches = fixtures.filter(f => isLiveStatus(f.status.short));
+    const upcomingMatches = fixtures.filter(f => isUpcomingStatus(f.status.short));
 
     return (
         <main className="min-h-screen bg-gray-900">
@@ -372,7 +176,7 @@ export default function Home() {
                                 <span>🎮</span> Kategori Sport
                             </h3>
                             <ul className="space-y-1">
-                                {SPORT_CATEGORIES.map((sport) => {
+                                {SPORT_CATEGORIES.slice(0, 6).map((sport) => {
                                     const IconComponent = sport.icon;
                                     return (
                                         <li key={sport.id}>
@@ -398,18 +202,18 @@ export default function Home() {
                                 <div className="flex justify-center mb-4">
                                     <span className="loader"></span>
                                 </div>
-                                <p className="text-gray-400">Loading matches...</p>
+                                <p className="text-gray-400">Memuat jadwal pertandingan...</p>
                                 <style jsx>{`
                                     .loader {
                                         width: 48px;
                                         height: 48px;
                                         border-radius: 50%;
                                         display: inline-block;
-                                        position: relative;
                                         border-top: 4px solid #FFF;
                                         border-right: 4px solid transparent;
                                         box-sizing: border-box;
                                         animation: rotation 1s linear infinite;
+                                        position: relative;
                                     }
                                     .loader::after {
                                         content: '';
@@ -432,21 +236,21 @@ export default function Home() {
                             </div>
                         ) : (
                             <>
-                                {/* ========== SEDANG TAYANG ========== */}
+                                {/* ========== SEDANG TAYANG (LIVE) ========== */}
                                 {liveMatches.length > 0 && (
                                     <div className="bg-gray-800 rounded-lg p-4">
                                         <h2 className="text-white font-semibold mb-4 flex items-center gap-2">
                                             <span className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></span>
                                             Sedang Tayang
-                                            <span className="text-xs bg-green-600 text-white px-2 py-0.5 rounded-full">
+                                            <span className="bg-red-600 text-white text-xs px-2 py-0.5 rounded-full ml-2">
                                                 {liveMatches.length} Live
                                             </span>
                                         </h2>
                                         <div className="space-y-3">
-                                            {liveMatches.map((channel) => (
+                                            {liveMatches.map((fixture) => (
                                                 <MatchCard
-                                                    key={channel.stream_id}
-                                                    channel={channel}
+                                                    key={fixture.id}
+                                                    fixture={fixture}
                                                     isLive={true}
                                                 />
                                             ))}
@@ -464,10 +268,10 @@ export default function Home() {
                                             </span>
                                         </h2>
                                         <div className="space-y-3">
-                                            {upcomingMatches.map((channel) => (
+                                            {upcomingMatches.map((fixture) => (
                                                 <MatchCard
-                                                    key={channel.stream_id}
-                                                    channel={channel}
+                                                    key={fixture.id}
+                                                    fixture={fixture}
                                                     isLive={false}
                                                 />
                                             ))}
@@ -476,7 +280,7 @@ export default function Home() {
                                 )}
 
                                 {/* Empty State */}
-                                {channels.length === 0 && (
+                                {fixtures.length === 0 && (
                                     <div className="bg-gray-800 rounded-lg p-8 text-center">
                                         <p className="text-4xl mb-4">😴</p>
                                         <p className="text-gray-400">Tidak ada pertandingan tersedia saat ini</p>
@@ -529,21 +333,35 @@ export default function Home() {
     );
 }
 
-// ========== MATCH CARD COMPONENT ==========
-function MatchCard({ channel, isLive }) {
-    const { parsed } = channel;
+// ========== MATCH CARD COMPONENT (SAME DESIGN!) ==========
+function MatchCard({ fixture, isLive }) {
+    const { teams, league, status, goals, stream, date, id } = fixture;
+    const hasStream = !!stream;
+
+    // Link: pakai fixture ID, tambah stream_id sebagai query param
+    const matchUrl = hasStream
+        ? `/match/${id}?stream=${stream.stream_id}`
+        : `/match/${id}`;
 
     return (
-        <Link href={`/match/${channel.stream_id}`}>
-            <div className="bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors cursor-pointer group overflow-hidden">
+        <Link href={matchUrl}>
+            <div className={`bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors cursor-pointer group overflow-hidden relative ${!hasStream ? 'opacity-70' : ''}`}>
 
-                {/* Header - Date & League */}
+                {/* Live Badge - Top Left */}
+                {isLive && (
+                    <div className="absolute top-0 left-0 bg-red-600 text-white text-[10px] px-2 py-0.5 rounded-br font-bold flex items-center gap-1 z-10">
+                        <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse"></span>
+                        {status.elapsed ? `${status.elapsed}'` : 'LIVE'}
+                    </div>
+                )}
+
+                {/* Header - Status & League */}
                 <div className="flex justify-between items-center px-3 py-1.5 bg-gray-800 text-[10px] sm:text-xs">
-                    <span className="text-gray-400">
-                        {parsed.kickoffDate ? `${parsed.kickoffDate.split(',')[1]?.trim() || parsed.kickoffDate}` : ''} - {parsed.kickoffDisplay || '--:--'}
+                    <span className={`font-medium ${isLive ? 'text-red-400' : 'text-gray-400'}`}>
+                        {isLive ? '🔴 Sedang Tayang' : `Upcoming - ${formatKickoffTime(date)}`}
                     </span>
                     <span className="text-gray-400 truncate max-w-[120px] sm:max-w-[200px]">
-                        {parsed.league || 'Football'}
+                        {league.name || 'Football'}
                     </span>
                 </div>
 
@@ -553,57 +371,53 @@ function MatchCard({ channel, isLive }) {
                     {/* Home Team */}
                     <div className="flex items-center gap-2 flex-1 min-w-0 justify-end">
                         <span className="text-white text-xs sm:text-sm font-medium truncate text-right">
-                            {parsed.homeTeam}
+                            {teams.home.name}
                         </span>
-                        {parsed.homeLogo ? (
-                            <img
-                                src={parsed.homeLogo}
-                                alt={parsed.homeTeam}
-                                className="w-6 h-6 sm:w-8 sm:h-8 object-contain flex-shrink-0"
-                                onError={(e) => e.target.style.display = 'none'}
-                            />
-                        ) : (
-                            <span className="text-lg sm:text-xl flex-shrink-0">⚽</span>
-                        )}
+                        <img
+                            src={teams.home.logo}
+                            alt={teams.home.name}
+                            className="w-6 h-6 sm:w-8 sm:h-8 object-contain flex-shrink-0"
+                            onError={(e) => e.target.src = 'https://placehold.co/32x32/374151/ffffff?text=⚽'}
+                        />
                     </div>
 
-                    {/* VS */}
+                    {/* Score / VS */}
                     <div className="flex-shrink-0 px-2">
-                        <span className="text-gray-400 text-xs sm:text-sm font-bold">VS</span>
+                        {isLive ? (
+                            <span className="text-white text-sm sm:text-base font-bold">
+                                {goals.home ?? 0} - {goals.away ?? 0}
+                            </span>
+                        ) : (
+                            <span className="text-gray-400 text-xs sm:text-sm font-bold">VS</span>
+                        )}
                     </div>
 
                     {/* Away Team */}
                     <div className="flex items-center gap-2 flex-1 min-w-0">
-                        {parsed.awayLogo ? (
-                            <img
-                                src={parsed.awayLogo}
-                                alt={parsed.awayTeam}
-                                className="w-6 h-6 sm:w-8 sm:h-8 object-contain flex-shrink-0"
-                                onError={(e) => e.target.style.display = 'none'}
-                            />
-                        ) : (
-                            <span className="text-lg sm:text-xl flex-shrink-0">⚽</span>
-                        )}
+                        <img
+                            src={teams.away.logo}
+                            alt={teams.away.name}
+                            className="w-6 h-6 sm:w-8 sm:h-8 object-contain flex-shrink-0"
+                            onError={(e) => e.target.src = 'https://placehold.co/32x32/374151/ffffff?text=⚽'}
+                        />
                         <span className="text-white text-xs sm:text-sm font-medium truncate">
-                            {parsed.awayTeam}
+                            {teams.away.name}
                         </span>
                     </div>
 
                     {/* Tombol Tonton */}
                     <div className="flex-shrink-0 ml-2">
-                        <span className="bg-orange-500 text-white text-[10px] sm:text-xs font-bold px-2.5 sm:px-3 py-1.5 rounded group-hover:bg-orange-600 transition-colors inline-flex items-center gap-1">
-                            Tonton
-                        </span>
+                        {hasStream ? (
+                            <span className={`text-white text-[10px] sm:text-xs font-bold px-2.5 sm:px-3 py-1.5 rounded transition-colors inline-flex items-center gap-1 ${isLive ? 'bg-red-600 group-hover:bg-red-700' : 'bg-orange-500 group-hover:bg-orange-600'}`}>
+                                {isLive ? 'Tonton ▶' : 'Tonton'}
+                            </span>
+                        ) : (
+                            <span className="text-gray-400 text-[10px] sm:text-xs font-medium px-2.5 sm:px-3 py-1.5 rounded bg-gray-600">
+                                No Stream
+                            </span>
+                        )}
                     </div>
                 </div>
-
-                {/* Live Badge */}
-                {isLive && (
-                    <div className="absolute top-0 left-0 bg-red-600 text-white text-[10px] px-2 py-0.5 rounded-br font-bold flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse"></span>
-                        LIVE
-                    </div>
-                )}
             </div>
         </Link>
     );
