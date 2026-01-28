@@ -308,41 +308,41 @@ export default function MatchPage() {
                     ) : isLive && hasStream ? (
                         /* LIVE but not started yet - show play button */
                         <div
-                            className="bg-black rounded-lg aspect-video w-full overflow-hidden shadow-2xl relative cursor-pointer"
+                            className="bg-black rounded-lg w-full overflow-hidden shadow-2xl relative cursor-pointer min-h-[280px] sm:min-h-[350px] md:aspect-video"
                             onClick={() => startStream(actualStreamId)}
                         >
                             {/* Background gradient */}
                             <div className="absolute inset-0 bg-gradient-to-b from-gray-800 to-gray-900 opacity-90"></div>
 
                             {/* Content */}
-                            <div className="absolute inset-0 flex flex-col justify-center items-center text-center p-2 sm:p-4">
+                            <div className="absolute inset-0 flex flex-col justify-center items-center text-center p-4 sm:p-6">
 
                                 {/* Team Logos + Match Title */}
-                                <div className="flex items-center justify-center gap-2 sm:gap-4 mb-2 sm:mb-4">
-                                    <div className="text-center flex-1 max-w-[120px]">
+                                <div className="flex items-center justify-center gap-3 sm:gap-6 mb-3 sm:mb-4">
+                                    <div className="text-center flex-1 max-w-[100px] sm:max-w-[120px]">
                                         <img
                                             src={teams.home.logo}
                                             alt={teams.home.name}
-                                            className="w-10 h-10 sm:w-16 sm:h-16 md:w-20 md:h-20 object-contain mx-auto mb-1 sm:mb-2"
+                                            className="w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 object-contain mx-auto mb-1 sm:mb-2"
                                         />
-                                        <p className="text-white font-semibold text-xs sm:text-sm md:text-base truncate">{teams.home.name}</p>
+                                        <p className="text-white font-semibold text-[11px] sm:text-sm md:text-base truncate">{teams.home.name}</p>
                                     </div>
                                     <div className="text-center px-2">
-                                        <div className="text-white text-2xl sm:text-3xl font-bold mb-1">
+                                        <div className="text-white text-xl sm:text-2xl md:text-3xl font-bold mb-1">
                                             {goals.home ?? 0} - {goals.away ?? 0}
                                         </div>
                                     </div>
-                                    <div className="text-center flex-1 max-w-[120px]">
+                                    <div className="text-center flex-1 max-w-[100px] sm:max-w-[120px]">
                                         <img
                                             src={teams.away.logo}
                                             alt={teams.away.name}
-                                            className="w-10 h-10 sm:w-16 sm:h-16 md:w-20 md:h-20 object-contain mx-auto mb-1 sm:mb-2"
+                                            className="w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 object-contain mx-auto mb-1 sm:mb-2"
                                         />
-                                        <p className="text-white font-semibold text-xs sm:text-sm md:text-base truncate">{teams.away.name}</p>
+                                        <p className="text-white font-semibold text-[11px] sm:text-sm md:text-base truncate">{teams.away.name}</p>
                                     </div>
                                 </div>
 
-                                <div className="text-xl sm:text-3xl font-bold text-red-500 animate-pulse mb-4">
+                                <div className="text-lg sm:text-2xl md:text-3xl font-bold text-red-500 animate-pulse mb-3 sm:mb-4">
                                     🔴 LIVE NOW
                                 </div>
 
@@ -352,7 +352,7 @@ export default function MatchPage() {
                                         e.stopPropagation();
                                         startStream(actualStreamId);
                                     }}
-                                    className="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 sm:py-4 sm:px-10 rounded-full text-lg sm:text-xl shadow-lg transition-all transform hover:scale-105 flex items-center gap-2"
+                                    className="bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 px-5 sm:py-3 sm:px-8 md:py-4 md:px-10 rounded-full text-sm sm:text-lg md:text-xl shadow-lg transition-all transform hover:scale-105 flex items-center gap-2"
                                 >
                                     <FaPlay />
                                     <span>Tonton Sekarang</span>
@@ -361,54 +361,54 @@ export default function MatchPage() {
                         </div>
                     ) : (
                         /* UPCOMING - Show Info Only */
-                        <div className="bg-black rounded-lg aspect-video w-full overflow-hidden shadow-2xl relative">
+                        <div className="bg-black rounded-lg w-full overflow-hidden shadow-2xl relative min-h-[280px] sm:min-h-[350px] md:aspect-video">
                             {/* Background gradient */}
                             <div className="absolute inset-0 bg-gradient-to-b from-gray-800 to-gray-900 opacity-90"></div>
 
                             {/* Content */}
-                            <div className="absolute inset-0 flex flex-col justify-center items-center text-center p-2 sm:p-4">
+                            <div className="absolute inset-0 flex flex-col justify-center items-center text-center p-4 sm:p-6">
 
                                 {/* Team Logos + Match Title */}
-                                <div className="flex items-center justify-center gap-2 sm:gap-4 mb-2 sm:mb-4">
-                                    <div className="text-center flex-1 max-w-[120px]">
+                                <div className="flex items-center justify-center gap-3 sm:gap-6 mb-3 sm:mb-4">
+                                    <div className="text-center flex-1 max-w-[100px] sm:max-w-[120px]">
                                         <img
                                             src={teams.home.logo}
                                             alt={teams.home.name}
-                                            className="w-10 h-10 sm:w-16 sm:h-16 md:w-20 md:h-20 object-contain mx-auto mb-1 sm:mb-2"
+                                            className="w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 object-contain mx-auto mb-1 sm:mb-2"
                                         />
-                                        <p className="text-white font-semibold text-xs sm:text-sm md:text-base truncate">{teams.home.name}</p>
+                                        <p className="text-white font-semibold text-[11px] sm:text-sm md:text-base truncate">{teams.home.name}</p>
                                     </div>
-                                    <div className="text-lg sm:text-2xl md:text-4xl font-bold text-gray-400 px-1">VS</div>
-                                    <div className="text-center flex-1 max-w-[120px]">
+                                    <div className="text-xl sm:text-2xl md:text-4xl font-bold text-gray-400 px-1">VS</div>
+                                    <div className="text-center flex-1 max-w-[100px] sm:max-w-[120px]">
                                         <img
                                             src={teams.away.logo}
                                             alt={teams.away.name}
-                                            className="w-10 h-10 sm:w-16 sm:h-16 md:w-20 md:h-20 object-contain mx-auto mb-1 sm:mb-2"
+                                            className="w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 object-contain mx-auto mb-1 sm:mb-2"
                                         />
-                                        <p className="text-white font-semibold text-xs sm:text-sm md:text-base truncate">{teams.away.name}</p>
+                                        <p className="text-white font-semibold text-[11px] sm:text-sm md:text-base truncate">{teams.away.name}</p>
                                     </div>
                                 </div>
 
-                                <p className="text-gray-400 text-xs sm:text-sm mb-2 sm:mb-4">{league.name}</p>
+                                <p className="text-gray-400 text-[11px] sm:text-sm mb-2 sm:mb-3">{league.name}</p>
 
                                 {/* Upcoming Status */}
-                                <div className="mb-3 sm:mb-6">
-                                    <div className="text-xl sm:text-2xl font-bold text-orange-400 mb-1">
+                                <div className="mb-3 sm:mb-4">
+                                    <div className="text-lg sm:text-xl md:text-2xl font-bold text-orange-400 mb-1">
                                         ⏰ Upcoming
                                     </div>
-                                    <p className="text-base sm:text-lg text-gray-300">Kickoff: {kickoffDisplay}</p>
+                                    <p className="text-sm sm:text-base md:text-lg text-gray-300">Kickoff: {kickoffDisplay}</p>
                                 </div>
 
                                 {/* Info Message */}
                                 <div className="text-center">
-                                    <p className="text-gray-400 text-xs sm:text-sm px-4 mb-4">
+                                    <p className="text-gray-400 text-[11px] sm:text-sm px-2 mb-3">
                                         {hasStream
-                                            ? 'Pertandingan belum dimulai. Stream akan tersedia saat match dimulai.'
-                                            : 'Pertandingan belum dimulai. Silakan kembali saat match sudah LIVE.'}
+                                            ? 'Stream akan tersedia saat match dimulai.'
+                                            : 'Silakan kembali saat match sudah LIVE.'}
                                     </p>
                                     <Link
                                         href="/"
-                                        className="inline-block bg-gray-700 hover:bg-gray-600 text-white font-medium py-2 px-6 rounded-full text-sm transition-colors"
+                                        className="inline-block bg-gray-700 hover:bg-gray-600 text-white font-medium py-2 px-5 rounded-full text-xs sm:text-sm transition-colors"
                                     >
                                         ← Kembali ke Beranda
                                     </Link>
