@@ -205,8 +205,8 @@ export default function BasketballMatchPage() {
             <div className="container max-w-6xl mx-auto px-4 py-4 sm:py-6">
 
                 {/* ========== BANNERS ========== */}
-                <div className="mb-4 space-y-2">
-                    {BANNERS.slice(0, 2).map((banner) => (
+                <div className="mb-6 space-y-2">
+                    {BANNERS.map((banner) => (
                         <div key={banner.id} className="banner-slot">
                             <a href={banner.link} target="_blank" rel="noopener">
                                 <img
