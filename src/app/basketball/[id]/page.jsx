@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
-import Navbar from '../../components/Navbar';
-import VideoPlayer from '../../components/VideoPlayer';
+import Navbar from '../../../components/Navbar';
+import VideoPlayer from '../../../components/VideoPlayer';
 import Link from 'next/link';
 
 // React Icons
@@ -27,29 +27,32 @@ const BANNERS = [
 
 // ========== STATUS HELPERS ==========
 function isLiveStatus(status) {
+    if (!status) return false;
     const liveStatuses = ['Q1', 'Q2', 'Q3', 'Q4', 'OT', 'HT', 'BT', 'LIVE'];
     return liveStatuses.includes(status);
 }
 
 function isFinishedStatus(status) {
+    if (!status) return false;
     const finishedStatuses = ['FT', 'AOT', 'POST'];
     return finishedStatuses.includes(status);
 }
 
 // ========== FORMAT TIME ==========
 function formatKickoffTime(dateString) {
+    if (!dateString) return '-';
     const date = new Date(dateString);
     const hours = date.getHours().toString().padStart(2, '0');
     const minutes = date.getMinutes().toString().padStart(2, '0');
     return `${hours}:${minutes} WIB`;
 }
 
-export default function NbaMatchPage() {
+export default function BasketballMatchPage() {
     const params = useParams();
     const searchParams = useSearchParams();
 
-    const matchId = params.id;
-    const streamIdFromUrl = searchParams.get('stream');
+    const matchId = params?.id;
+    const streamIdFromUrl = searchParams?.get('stream');
 
     const [match, setMatch] = useState(null);
     const [allMatches, setAllMatches] = useState([]);
@@ -59,11 +62,13 @@ export default function NbaMatchPage() {
     const [streamLoading, setStreamLoading] = useState(false);
 
     useEffect(() => {
-        fetchMatch();
+        if (matchId) {
+            fetchMatch();
 
-        // Refresh setiap 30 detik untuk update skor
-        const interval = setInterval(fetchMatch, 30000);
-        return () => clearInterval(interval);
+            // Refresh setiap 30 detik untuk update skor
+            const interval = setInterval(fetchMatch, 30000);
+            return () => clearInterval(interval);
+        }
     }, [matchId]);
 
     const fetchMatch = async () => {
@@ -78,10 +83,9 @@ export default function NbaMatchPage() {
                     setMatch(currentMatch);
 
                     // Auto start stream if has stream
-                    const hasStream = currentMatch.stream || streamIdFromUrl;
-                    if (hasStream && !showPlayer) {
-                        const sid = currentMatch.stream?.streamId || streamIdFromUrl;
-                        startStream(sid);
+                    const streamId = currentMatch.stream?.streamId || streamIdFromUrl;
+                    if (streamId && !showPlayer) {
+                        startStream(streamId);
                     }
                 }
                 setAllMatches(data.matches);
@@ -111,14 +115,16 @@ export default function NbaMatchPage() {
         }
     };
 
-    // Share URL
+    // Share URL - safe access
     const shareUrl = typeof window !== 'undefined' ? window.location.href : '';
-    const shareTitle = match ? encodeURIComponent(`${match.homeTeam.name} vs ${match.awayTeam.name} - NBA`) : 'SportMeriah NBA';
+    const shareTitle = match
+        ? encodeURIComponent(`${match.homeTeam?.name || 'Team'} vs ${match.awayTeam?.name || 'Team'} - NBA`)
+        : 'SportMeriah NBA';
 
-    // Get other matches with streams
+    // Get other matches with streams - FIXED: proper null check
     const otherMatches = allMatches
         .filter(m => m.id !== parseInt(matchId))
-        .filter(m => m.hasStream)
+        .filter(m => m.hasStream && m.stream?.streamId)
         .slice(0, 5);
 
     if (loading) {
@@ -164,10 +170,18 @@ export default function NbaMatchPage() {
         );
     }
 
-    const { homeTeam, awayTeam, status, scores, stream, date, venue } = match;
+    // Safe destructuring with defaults
+    const homeTeam = match.homeTeam || { name: 'Home Team', logo: '' };
+    const awayTeam = match.awayTeam || { name: 'Away Team', logo: '' };
+    const status = match.status || { short: '', long: '' };
+    const scores = match.scores || { home: {}, away: {} };
+    const stream = match.stream;
+    const date = match.date;
+    const venue = match.venue;
+
     const isLive = isLiveStatus(status.short);
     const isFinished = isFinishedStatus(status.short);
-    const hasStream = !!stream || !!streamIdFromUrl;
+    const hasStream = !!stream?.streamId || !!streamIdFromUrl;
     const matchTitle = `${homeTeam.name} vs ${awayTeam.name}`;
     const kickoffDisplay = formatKickoffTime(date);
 
@@ -195,9 +209,9 @@ export default function NbaMatchPage() {
                     <div className="mb-4 sm:mb-6">
                         <div className="relative bg-black rounded-lg overflow-hidden aspect-video">
                             <VideoPlayer
-                                src={streamUrl}
+                                src={streamUrl || ''}
                                 autoPlay={true}
-                                title={matchTitle}
+                                title={matchTitle || 'NBA Game'}
                             />
                         </div>
                     </div>
@@ -208,7 +222,7 @@ export default function NbaMatchPage() {
                             <div className="flex items-center gap-4 sm:gap-8 mb-4">
                                 <div className="flex flex-col items-center">
                                     <img
-                                        src={homeTeam.logo}
+                                        src={homeTeam.logo || 'https://placehold.co/96x96/374151/ffffff?text=🏀'}
                                         alt={homeTeam.name}
                                         className="w-16 h-16 sm:w-24 sm:h-24 object-contain"
                                         onError={(e) => e.target.src = 'https://placehold.co/96x96/374151/ffffff?text=🏀'}
@@ -219,7 +233,7 @@ export default function NbaMatchPage() {
                                 </div>
 
                                 <div className="text-center">
-                                    {(isLive || isFinished) && scores?.home?.total !== null ? (
+                                    {(isLive || isFinished) && scores?.home?.total != null ? (
                                         <div className="text-2xl sm:text-4xl font-bold text-white">
                                             {scores.home.total} - {scores.away.total}
                                         </div>
@@ -233,7 +247,7 @@ export default function NbaMatchPage() {
 
                                 <div className="flex flex-col items-center">
                                     <img
-                                        src={awayTeam.logo}
+                                        src={awayTeam.logo || 'https://placehold.co/96x96/374151/ffffff?text=🏀'}
                                         alt={awayTeam.name}
                                         className="w-16 h-16 sm:w-24 sm:h-24 object-contain"
                                         onError={(e) => e.target.src = 'https://placehold.co/96x96/374151/ffffff?text=🏀'}
@@ -318,7 +332,7 @@ export default function NbaMatchPage() {
                     </div>
 
                     {/* Quarter Scores */}
-                    {(isLive || isFinished) && scores?.home?.quarter_1 !== null && (
+                    {(isLive || isFinished) && scores?.home?.quarter_1 != null && (
                         <div className="mb-4 bg-gray-800 rounded-lg p-3 order-2">
                             <table className="w-full text-xs sm:text-sm">
                                 <thead>
@@ -328,28 +342,28 @@ export default function NbaMatchPage() {
                                         <th className="text-center py-1 w-10">Q2</th>
                                         <th className="text-center py-1 w-10">Q3</th>
                                         <th className="text-center py-1 w-10">Q4</th>
-                                        {scores.home.over_time && <th className="text-center py-1 w-10">OT</th>}
+                                        {scores?.home?.over_time && <th className="text-center py-1 w-10">OT</th>}
                                         <th className="text-center py-1 w-12 font-bold">Total</th>
                                     </tr>
                                 </thead>
                                 <tbody className="text-white">
                                     <tr>
                                         <td className="py-1 truncate max-w-[100px]">{homeTeam.name}</td>
-                                        <td className="text-center py-1">{scores.home.quarter_1 ?? '-'}</td>
-                                        <td className="text-center py-1">{scores.home.quarter_2 ?? '-'}</td>
-                                        <td className="text-center py-1">{scores.home.quarter_3 ?? '-'}</td>
-                                        <td className="text-center py-1">{scores.home.quarter_4 ?? '-'}</td>
-                                        {scores.home.over_time && <td className="text-center py-1">{scores.home.over_time}</td>}
-                                        <td className="text-center py-1 font-bold text-orange-400">{scores.home.total}</td>
+                                        <td className="text-center py-1">{scores?.home?.quarter_1 ?? '-'}</td>
+                                        <td className="text-center py-1">{scores?.home?.quarter_2 ?? '-'}</td>
+                                        <td className="text-center py-1">{scores?.home?.quarter_3 ?? '-'}</td>
+                                        <td className="text-center py-1">{scores?.home?.quarter_4 ?? '-'}</td>
+                                        {scores?.home?.over_time && <td className="text-center py-1">{scores.home.over_time}</td>}
+                                        <td className="text-center py-1 font-bold text-orange-400">{scores?.home?.total ?? '-'}</td>
                                     </tr>
                                     <tr>
                                         <td className="py-1 truncate max-w-[100px]">{awayTeam.name}</td>
-                                        <td className="text-center py-1">{scores.away.quarter_1 ?? '-'}</td>
-                                        <td className="text-center py-1">{scores.away.quarter_2 ?? '-'}</td>
-                                        <td className="text-center py-1">{scores.away.quarter_3 ?? '-'}</td>
-                                        <td className="text-center py-1">{scores.away.quarter_4 ?? '-'}</td>
-                                        {scores.away.over_time && <td className="text-center py-1">{scores.away.over_time}</td>}
-                                        <td className="text-center py-1 font-bold text-orange-400">{scores.away.total}</td>
+                                        <td className="text-center py-1">{scores?.away?.quarter_1 ?? '-'}</td>
+                                        <td className="text-center py-1">{scores?.away?.quarter_2 ?? '-'}</td>
+                                        <td className="text-center py-1">{scores?.away?.quarter_3 ?? '-'}</td>
+                                        <td className="text-center py-1">{scores?.away?.quarter_4 ?? '-'}</td>
+                                        {scores?.away?.over_time && <td className="text-center py-1">{scores.away.over_time}</td>}
+                                        <td className="text-center py-1 font-bold text-orange-400">{scores?.away?.total ?? '-'}</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -426,7 +440,7 @@ export default function NbaMatchPage() {
                         {!isFinished && <> This basketball game tips off at <strong>{kickoffDisplay}</strong>.</>}
                     </p>
                     <p>
-                        Get the best quality stream and real-time score updates right here. Don't miss any of the action!
+                        Get the best quality stream and real-time score updates right here. Don&apos;t miss any of the action!
                     </p>
                 </div>
 
@@ -441,14 +455,14 @@ export default function NbaMatchPage() {
                             {otherMatches.map((m) => (
                                 <Link
                                     key={m.id}
-                                    href={`/basketball/${m.id}?stream=${m.stream.streamId}`}
+                                    href={`/basketball/${m.id}?stream=${m.stream?.streamId || ''}`}
                                     className="block bg-gray-700 p-3 sm:p-4 rounded-lg shadow-md transition-all hover:bg-gray-600 flex justify-between items-center"
                                 >
                                     <span className="text-sm sm:text-base font-medium text-white truncate pr-4">
-                                        {m.homeTeam.name} vs {m.awayTeam.name}
+                                        {m.homeTeam?.name || 'Home'} vs {m.awayTeam?.name || 'Away'}
                                     </span>
-                                    <span className={`text-xs sm:text-sm font-bold flex-shrink-0 ${isLiveStatus(m.status.short) ? 'text-red-500 animate-pulse' : 'text-orange-500'}`}>
-                                        {isLiveStatus(m.status.short) ? 'LIVE' : formatKickoffTime(m.date)}
+                                    <span className={`text-xs sm:text-sm font-bold flex-shrink-0 ${isLiveStatus(m.status?.short) ? 'text-red-500 animate-pulse' : 'text-orange-500'}`}>
+                                        {isLiveStatus(m.status?.short) ? 'LIVE' : formatKickoffTime(m.date)}
                                     </span>
                                 </Link>
                             ))}
