@@ -38,6 +38,11 @@ function isFinishedStatus(status) {
     return finishedStatuses.includes(status);
 }
 
+function isUpcomingStatus(status) {
+    if (!status) return true;
+    return status === 'NS' || (!isLiveStatus(status) && !isFinishedStatus(status));
+}
+
 // ========== FORMAT TIME ==========
 function formatKickoffTime(dateString) {
     if (!dateString) return '-';
@@ -82,9 +87,10 @@ export default function BasketballMatchPage() {
                 if (currentMatch) {
                     setMatch(currentMatch);
 
-                    // Auto start stream if has stream
+                    // Auto start stream ONLY if LIVE and has stream
                     const streamId = currentMatch.stream?.streamId || streamIdFromUrl;
-                    if (streamId && !showPlayer) {
+                    const isLive = isLiveStatus(currentMatch.status?.short);
+                    if (streamId && isLive && !showPlayer) {
                         startStream(streamId);
                     }
                 }
@@ -181,7 +187,9 @@ export default function BasketballMatchPage() {
 
     const isLive = isLiveStatus(status.short);
     const isFinished = isFinishedStatus(status.short);
+    const isUpcoming = isUpcomingStatus(status.short);
     const hasStream = !!stream?.streamId || !!streamIdFromUrl;
+    const actualStreamId = stream?.streamId || streamIdFromUrl;
     const matchTitle = `${homeTeam.name} vs ${awayTeam.name}`;
     const kickoffDisplay = formatKickoffTime(date);
 
@@ -197,6 +205,52 @@ export default function BasketballMatchPage() {
         if (status.short === 'FT') return 'Final';
         return '';
     };
+
+    // ========== FINISHED STATE ==========
+    if (isFinished) {
+        return (
+            <main className="min-h-screen bg-gray-900">
+                <Navbar />
+                <div className="container max-w-6xl mx-auto px-4 py-6">
+                    <div className="bg-gray-800 rounded-lg p-8 text-center max-w-xl mx-auto">
+                        <div className="text-6xl mb-4">🏀</div>
+                        <h1 className="text-2xl font-bold text-white mb-2">Pertandingan Sudah Selesai</h1>
+                        <p className="text-gray-400 mb-6">
+                            Pertandingan NBA ini sudah berakhir.
+                        </p>
+                        <div className="bg-gray-700 rounded-lg p-4 mb-6">
+                            <div className="flex items-center justify-center gap-4 mb-2">
+                                <img
+                                    src={homeTeam.logo || 'https://placehold.co/96x96/374151/ffffff?text=🏀'}
+                                    alt={homeTeam.name}
+                                    className="w-12 h-12 object-contain"
+                                    onError={(e) => e.target.src = 'https://placehold.co/96x96/374151/ffffff?text=🏀'}
+                                />
+                                <span className="text-white text-2xl font-bold">
+                                    {scores?.home?.total ?? 0} - {scores?.away?.total ?? 0}
+                                </span>
+                                <img
+                                    src={awayTeam.logo || 'https://placehold.co/96x96/374151/ffffff?text=🏀'}
+                                    alt={awayTeam.name}
+                                    className="w-12 h-12 object-contain"
+                                    onError={(e) => e.target.src = 'https://placehold.co/96x96/374151/ffffff?text=🏀'}
+                                />
+                            </div>
+                            <p className="text-white font-semibold text-lg">{matchTitle}</p>
+                            <p className="text-gray-400 text-sm">NBA</p>
+                        </div>
+                        <Link
+                            href="/basketball"
+                            className="inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-6 rounded-full transition-colors"
+                        >
+                            <MdSportsBasketball size={20} />
+                            Kembali ke NBA
+                        </Link>
+                    </div>
+                </div>
+            </main>
+        );
+    }
 
     return (
         <main className="min-h-screen bg-gray-900">
@@ -220,87 +274,160 @@ export default function BasketballMatchPage() {
                     ))}
                 </div>
 
-                {/* ========== VIDEO PLAYER ========== */}
-                {showPlayer && streamUrl ? (
-                    <div className="mb-4 sm:mb-6">
-                        <div className="relative bg-black rounded-lg overflow-hidden aspect-video">
-                            <VideoPlayer streamUrl={streamUrl || ''} />
+                {/* ========== PLAYER SECTION ========== */}
+                <div className="relative mb-4">
+                    {showPlayer && streamUrl ? (
+                        /* Video Player - LIVE */
+                        <div>
+                            {/* Live Badge */}
+                            <div className="bg-red-600 text-white px-4 py-2 rounded-t-lg flex items-center gap-2">
+                                <span className="w-2 h-2 bg-white rounded-full animate-pulse"></span>
+                                <span className="font-bold">{isLive ? getQuarterDisplay() || 'LIVE' : 'Playing'}</span>
+                                {isLive && <span className="font-bold ml-2">{scores?.home?.total ?? 0} - {scores?.away?.total ?? 0}</span>}
+                                <span className="ml-2 text-sm truncate">{matchTitle}</span>
+                            </div>
+                            <VideoPlayer streamUrl={streamUrl} />
                         </div>
-                    </div>
-                ) : (
-                    <div className="mb-4 sm:mb-6">
-                        <div className="relative bg-gray-800 rounded-lg overflow-hidden aspect-video flex flex-col items-center justify-center">
-                            {/* Team Logos */}
-                            <div className="flex items-center gap-4 sm:gap-8 mb-4">
-                                <div className="flex flex-col items-center">
-                                    <img
-                                        src={homeTeam.logo || 'https://placehold.co/96x96/374151/ffffff?text=🏀'}
-                                        alt={homeTeam.name}
-                                        className="w-16 h-16 sm:w-24 sm:h-24 object-contain"
-                                        onError={(e) => e.target.src = 'https://placehold.co/96x96/374151/ffffff?text=🏀'}
-                                    />
-                                    <span className="text-white text-xs sm:text-sm mt-2 text-center max-w-[80px] sm:max-w-[120px] truncate">
-                                        {homeTeam.name}
-                                    </span>
-                                </div>
+                    ) : streamLoading ? (
+                        /* Loading Stream */
+                        <div className="bg-black rounded-lg aspect-video w-full overflow-hidden shadow-2xl relative flex items-center justify-center">
+                            <div className="text-center">
+                                <span className="loader"></span>
+                                <p className="text-white mt-4">Memuat Stream...</p>
+                            </div>
+                            <style jsx>{`
+                                .loader {
+                                    width: 48px;
+                                    height: 48px;
+                                    border-radius: 50%;
+                                    display: inline-block;
+                                    border-top: 4px solid #f97316;
+                                    border-right: 4px solid transparent;
+                                    box-sizing: border-box;
+                                    animation: rotation 1s linear infinite;
+                                }
+                                @keyframes rotation {
+                                    0% { transform: rotate(0deg); }
+                                    100% { transform: rotate(360deg); }
+                                }
+                            `}</style>
+                        </div>
+                    ) : isLive && hasStream ? (
+                        /* LIVE but not started yet - show play button */
+                        <div
+                            className="bg-black rounded-lg w-full overflow-hidden shadow-2xl relative cursor-pointer min-h-[280px] sm:min-h-[350px] md:aspect-video"
+                            onClick={() => startStream(actualStreamId)}
+                        >
+                            {/* Background gradient */}
+                            <div className="absolute inset-0 bg-gradient-to-b from-gray-800 to-gray-900 opacity-90"></div>
 
-                                <div className="text-center">
-                                    {(isLive || isFinished) && scores?.home?.total != null ? (
-                                        <div className="text-2xl sm:text-4xl font-bold text-white">
-                                            {scores.home.total} - {scores.away.total}
+                            {/* Content */}
+                            <div className="absolute inset-0 flex flex-col justify-center items-center text-center p-4 sm:p-6">
+
+                                {/* Team Logos + Match Title */}
+                                <div className="flex items-center justify-center gap-3 sm:gap-6 mb-3 sm:mb-4">
+                                    <div className="text-center flex-1 max-w-[100px] sm:max-w-[120px]">
+                                        <img
+                                            src={homeTeam.logo || 'https://placehold.co/96x96/374151/ffffff?text=🏀'}
+                                            alt={homeTeam.name}
+                                            className="w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 object-contain mx-auto mb-1 sm:mb-2"
+                                            onError={(e) => e.target.src = 'https://placehold.co/96x96/374151/ffffff?text=🏀'}
+                                        />
+                                        <p className="text-white font-semibold text-[11px] sm:text-sm md:text-base truncate">{homeTeam.name}</p>
+                                    </div>
+                                    <div className="text-center px-2">
+                                        <div className="text-white text-xl sm:text-2xl md:text-3xl font-bold mb-1">
+                                            {scores?.home?.total ?? 0} - {scores?.away?.total ?? 0}
                                         </div>
-                                    ) : (
-                                        <div className="text-xl sm:text-2xl font-bold text-gray-400">VS</div>
-                                    )}
-                                    <div className={`text-xs sm:text-sm mt-1 ${isLive ? 'text-red-500' : 'text-gray-400'}`}>
-                                        {isLive ? `🔴 ${getQuarterDisplay()}` : isFinished ? 'Final' : kickoffDisplay}
+                                    </div>
+                                    <div className="text-center flex-1 max-w-[100px] sm:max-w-[120px]">
+                                        <img
+                                            src={awayTeam.logo || 'https://placehold.co/96x96/374151/ffffff?text=🏀'}
+                                            alt={awayTeam.name}
+                                            className="w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 object-contain mx-auto mb-1 sm:mb-2"
+                                            onError={(e) => e.target.src = 'https://placehold.co/96x96/374151/ffffff?text=🏀'}
+                                        />
+                                        <p className="text-white font-semibold text-[11px] sm:text-sm md:text-base truncate">{awayTeam.name}</p>
                                     </div>
                                 </div>
 
-                                <div className="flex flex-col items-center">
-                                    <img
-                                        src={awayTeam.logo || 'https://placehold.co/96x96/374151/ffffff?text=🏀'}
-                                        alt={awayTeam.name}
-                                        className="w-16 h-16 sm:w-24 sm:h-24 object-contain"
-                                        onError={(e) => e.target.src = 'https://placehold.co/96x96/374151/ffffff?text=🏀'}
-                                    />
-                                    <span className="text-white text-xs sm:text-sm mt-2 text-center max-w-[80px] sm:max-w-[120px] truncate">
-                                        {awayTeam.name}
-                                    </span>
+                                <div className="text-lg sm:text-2xl md:text-3xl font-bold text-red-500 animate-pulse mb-3 sm:mb-4">
+                                    🔴 LIVE - {getQuarterDisplay()}
                                 </div>
-                            </div>
 
-                            {/* Play Button or Message */}
-                            {hasStream ? (
+                                {/* Play Button */}
                                 <button
-                                    onClick={() => startStream(stream?.streamId || streamIdFromUrl)}
-                                    disabled={streamLoading}
-                                    className="bg-orange-600 hover:bg-orange-700 text-white px-6 sm:px-8 py-3 rounded-full font-bold flex items-center gap-2 transition-colors disabled:opacity-50"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        startStream(actualStreamId);
+                                    }}
+                                    className="bg-orange-600 hover:bg-orange-700 text-white font-bold py-2.5 px-5 sm:py-3 sm:px-8 md:py-4 md:px-10 rounded-full text-sm sm:text-lg md:text-xl shadow-lg transition-all transform hover:scale-105 flex items-center gap-2"
                                 >
-                                    {streamLoading ? (
-                                        <>Loading...</>
-                                    ) : (
-                                        <>
-                                            <FaPlay /> Tonton Sekarang
-                                        </>
-                                    )}
+                                    <FaPlay />
+                                    <span>Tonton Sekarang</span>
                                 </button>
-                            ) : (
+                            </div>
+                        </div>
+                    ) : (
+                        /* UPCOMING - Show Info Only (SAME AS FOOTBALL) */
+                        <div className="bg-black rounded-lg w-full overflow-hidden shadow-2xl relative min-h-[280px] sm:min-h-[350px] md:aspect-video">
+                            {/* Background gradient */}
+                            <div className="absolute inset-0 bg-gradient-to-b from-gray-800 to-gray-900 opacity-90"></div>
+
+                            {/* Content */}
+                            <div className="absolute inset-0 flex flex-col justify-center items-center text-center p-4 sm:p-6">
+
+                                {/* Team Logos + Match Title */}
+                                <div className="flex items-center justify-center gap-3 sm:gap-6 mb-3 sm:mb-4">
+                                    <div className="text-center flex-1 max-w-[100px] sm:max-w-[120px]">
+                                        <img
+                                            src={homeTeam.logo || 'https://placehold.co/96x96/374151/ffffff?text=🏀'}
+                                            alt={homeTeam.name}
+                                            className="w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 object-contain mx-auto mb-1 sm:mb-2"
+                                            onError={(e) => e.target.src = 'https://placehold.co/96x96/374151/ffffff?text=🏀'}
+                                        />
+                                        <p className="text-white font-semibold text-[11px] sm:text-sm md:text-base truncate">{homeTeam.name}</p>
+                                    </div>
+                                    <div className="text-xl sm:text-2xl md:text-4xl font-bold text-gray-400 px-1">VS</div>
+                                    <div className="text-center flex-1 max-w-[100px] sm:max-w-[120px]">
+                                        <img
+                                            src={awayTeam.logo || 'https://placehold.co/96x96/374151/ffffff?text=🏀'}
+                                            alt={awayTeam.name}
+                                            className="w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 object-contain mx-auto mb-1 sm:mb-2"
+                                            onError={(e) => e.target.src = 'https://placehold.co/96x96/374151/ffffff?text=🏀'}
+                                        />
+                                        <p className="text-white font-semibold text-[11px] sm:text-sm md:text-base truncate">{awayTeam.name}</p>
+                                    </div>
+                                </div>
+
+                                <p className="text-gray-400 text-[11px] sm:text-sm mb-2 sm:mb-3">NBA Basketball</p>
+
+                                {/* Upcoming Status */}
+                                <div className="mb-3 sm:mb-4">
+                                    <div className="text-lg sm:text-xl md:text-2xl font-bold text-orange-400 mb-1">
+                                        🏀 Upcoming
+                                    </div>
+                                    <p className="text-sm sm:text-base md:text-lg text-gray-300">Kickoff: {kickoffDisplay}</p>
+                                </div>
+
+                                {/* Info Message */}
                                 <div className="text-center">
-                                    <p className="text-gray-400 mb-4">
-                                        {isFinished ? 'Pertandingan telah selesai' : 'Stream belum tersedia'}
+                                    <p className="text-gray-400 text-[11px] sm:text-sm px-2 mb-3">
+                                        {hasStream
+                                            ? 'Stream akan tersedia saat match dimulai.'
+                                            : 'Stream belum tersedia untuk pertandingan ini.'}
                                     </p>
                                     <Link
                                         href="/basketball"
-                                        className="text-orange-500 hover:text-orange-400 text-sm"
+                                        className="inline-block bg-gray-700 hover:bg-gray-600 text-white font-medium py-2 px-5 rounded-full text-xs sm:text-sm transition-colors"
                                     >
                                         ← Kembali ke NBA
                                     </Link>
                                 </div>
-                            )}
+                            </div>
                         </div>
-                    </div>
-                )}
+                    )}
+                </div>
 
                 {/* ========== MATCH DETAILS ========== */}
                 <div className="flex flex-col">
