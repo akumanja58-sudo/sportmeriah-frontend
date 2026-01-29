@@ -147,10 +147,24 @@ export default function FootballPage() {
                                         height: 48px;
                                         border-radius: 50%;
                                         display: inline-block;
-                                        border-top: 4px solid #22c55e;
+                                        border-top: 4px solid #FFF;
                                         border-right: 4px solid transparent;
                                         box-sizing: border-box;
                                         animation: rotation 1s linear infinite;
+                                        position: relative;
+                                    }
+                                    .loader::after {
+                                        content: '';
+                                        box-sizing: border-box;
+                                        position: absolute;
+                                        left: 0;
+                                        top: 0;
+                                        width: 48px;
+                                        height: 48px;
+                                        border-radius: 50%;
+                                        border-left: 4px solid #FF3D00;
+                                        border-bottom: 4px solid transparent;
+                                        animation: rotation 0.5s linear infinite reverse;
                                     }
                                     @keyframes rotation {
                                         0% { transform: rotate(0deg); }
@@ -160,15 +174,12 @@ export default function FootballPage() {
                             </div>
                         ) : (
                             <>
-                                {/* LIVE MATCHES */}
+                                {/* LIVE Section */}
                                 {liveMatches.length > 0 && (
-                                    <div className="bg-gray-800 rounded-lg p-4">
-                                        <h2 className="text-white font-semibold mb-4 flex items-center gap-2">
-                                            <span className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></span>
-                                            Sedang Tayang
-                                            <span className="bg-red-600 text-white text-xs px-2 py-0.5 rounded-full ml-2">
-                                                {liveMatches.length} Live
-                                            </span>
+                                    <div>
+                                        <h2 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+                                            <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
+                                            LIVE NOW
                                         </h2>
                                         <div className="space-y-3">
                                             {liveMatches.map((fixture) => (
@@ -182,14 +193,11 @@ export default function FootballPage() {
                                     </div>
                                 )}
 
-                                {/* UPCOMING MATCHES */}
+                                {/* Upcoming Section */}
                                 {upcomingMatches.length > 0 && (
-                                    <div className="bg-gray-800 rounded-lg p-4">
-                                        <h2 className="text-white font-semibold mb-4 flex items-center gap-2">
-                                            <span>📅</span> Jadwal Pertandingan
-                                            <span className="text-xs text-gray-400 font-normal">
-                                                ({upcomingMatches.length} pertandingan)
-                                            </span>
+                                    <div>
+                                        <h2 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+                                            ⏰ Upcoming
                                         </h2>
                                         <div className="space-y-3">
                                             {upcomingMatches.map((fixture) => (
@@ -203,14 +211,11 @@ export default function FootballPage() {
                                     </div>
                                 )}
 
-                                {/* FINISHED MATCHES */}
+                                {/* Finished Section */}
                                 {finishedMatches.length > 0 && (
-                                    <div className="bg-gray-800 rounded-lg p-4">
-                                        <h2 className="text-white font-semibold mb-4 flex items-center gap-2 text-gray-400">
-                                            <span>✓</span> Pertandingan Selesai
-                                            <span className="text-xs text-gray-500 font-normal">
-                                                ({finishedMatches.length} pertandingan)
-                                            </span>
+                                    <div>
+                                        <h2 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+                                            ✅ Selesai
                                         </h2>
                                         <div className="space-y-3">
                                             {finishedMatches.map((fixture) => (
@@ -244,7 +249,7 @@ export default function FootballPage() {
                                 Nonton Streaming Sepakbola Gratis
                             </h2>
                             <p>
-                                Nonton streaming sepakbola gratis di SportMeriah. Liga Champions, Europa League, 
+                                Nonton streaming sepakbola gratis di SportMeriah. Liga Champions, Europa League,
                                 Conference League, Premier League, La Liga, Serie A, Bundesliga, dan liga top lainnya.
                             </p>
                             <p>

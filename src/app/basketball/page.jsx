@@ -159,10 +159,24 @@ export default function NbaPage() {
                                         height: 48px;
                                         border-radius: 50%;
                                         display: inline-block;
-                                        border-top: 4px solid #f97316;
+                                        border-top: 4px solid #FFF;
                                         border-right: 4px solid transparent;
                                         box-sizing: border-box;
                                         animation: rotation 1s linear infinite;
+                                        position: relative;
+                                    }
+                                    .loader::after {
+                                        content: '';
+                                        box-sizing: border-box;
+                                        position: absolute;
+                                        left: 0;
+                                        top: 0;
+                                        width: 48px;
+                                        height: 48px;
+                                        border-radius: 50%;
+                                        border-left: 4px solid #FF3D00;
+                                        border-bottom: 4px solid transparent;
+                                        animation: rotation 0.5s linear infinite reverse;
                                     }
                                     @keyframes rotation {
                                         0% { transform: rotate(0deg); }
@@ -178,17 +192,10 @@ export default function NbaPage() {
                                         <h2 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
                                             <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
                                             LIVE NOW
-                                            <span className="text-xs text-gray-400 font-normal">
-                                                ({liveMatches.length} games)
-                                            </span>
                                         </h2>
                                         <div className="space-y-3">
                                             {liveMatches.map((match) => (
-                                                <NbaMatchCard
-                                                    key={match.id}
-                                                    match={match}
-                                                    isLive={true}
-                                                />
+                                                <NbaMatchCard key={match.id} match={match} isLive={true} />
                                             ))}
                                         </div>
                                     </div>
@@ -199,18 +206,11 @@ export default function NbaPage() {
                                     <div className="mb-6">
                                         <h2 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
                                             <IoCalendar className="text-orange-500" />
-                                            Upcoming Games
-                                            <span className="text-xs text-gray-400 font-normal">
-                                                ({upcomingMatches.length} games)
-                                            </span>
+                                            Upcoming
                                         </h2>
                                         <div className="space-y-3">
                                             {upcomingMatches.map((match) => (
-                                                <NbaMatchCard
-                                                    key={match.id}
-                                                    match={match}
-                                                    isLive={false}
-                                                />
+                                                <NbaMatchCard key={match.id} match={match} isLive={false} />
                                             ))}
                                         </div>
                                     </div>
@@ -219,20 +219,13 @@ export default function NbaPage() {
                                 {/* Finished Section */}
                                 {finishedMatches.length > 0 && (
                                     <div className="mb-6">
-                                        <h2 className="text-lg font-semibold text-gray-400 mb-3 flex items-center gap-2">
-                                            Finished Games
-                                            <span className="text-xs font-normal">
-                                                ({finishedMatches.length} games)
-                                            </span>
+                                        <h2 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+                                            <FaTrophy className="text-gray-500" />
+                                            Selesai
                                         </h2>
                                         <div className="space-y-3">
                                             {finishedMatches.map((match) => (
-                                                <NbaMatchCard
-                                                    key={match.id}
-                                                    match={match}
-                                                    isLive={false}
-                                                    isFinished={true}
-                                                />
+                                                <NbaMatchCard key={match.id} match={match} isLive={false} isFinished={true} />
                                             ))}
                                         </div>
                                     </div>

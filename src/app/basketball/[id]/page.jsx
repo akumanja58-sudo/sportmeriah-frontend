@@ -146,10 +146,24 @@ export default function BasketballMatchPage() {
                             height: 48px;
                             border-radius: 50%;
                             display: inline-block;
-                            border-top: 4px solid #f97316;
+                            border-top: 4px solid #FFF;
                             border-right: 4px solid transparent;
                             box-sizing: border-box;
                             animation: rotation 1s linear infinite;
+                            position: relative;
+                        }
+                        .loader::after {
+                            content: '';
+                            box-sizing: border-box;
+                            position: absolute;
+                            left: 0;
+                            top: 0;
+                            width: 48px;
+                            height: 48px;
+                            border-radius: 50%;
+                            border-left: 4px solid #FF3D00;
+                            border-bottom: 4px solid transparent;
+                            animation: rotation 0.5s linear infinite reverse;
                         }
                         @keyframes rotation {
                             0% { transform: rotate(0deg); }
@@ -301,10 +315,24 @@ export default function BasketballMatchPage() {
                                     height: 48px;
                                     border-radius: 50%;
                                     display: inline-block;
-                                    border-top: 4px solid #f97316;
+                                    border-top: 4px solid #FFF;
                                     border-right: 4px solid transparent;
                                     box-sizing: border-box;
                                     animation: rotation 1s linear infinite;
+                                    position: relative;
+                                }
+                                .loader::after {
+                                    content: '';
+                                    box-sizing: border-box;
+                                    position: absolute;
+                                    left: 0;
+                                    top: 0;
+                                    width: 48px;
+                                    height: 48px;
+                                    border-radius: 50%;
+                                    border-left: 4px solid #FF3D00;
+                                    border-bottom: 4px solid transparent;
+                                    animation: rotation 0.5s linear infinite reverse;
                                 }
                                 @keyframes rotation {
                                     0% { transform: rotate(0deg); }
