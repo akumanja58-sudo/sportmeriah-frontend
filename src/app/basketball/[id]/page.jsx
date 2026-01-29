@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
-import Navbar from '../../../components/Navbar';
-import VideoPlayer from '../../../components/VideoPlayer';
+import Navbar from '../../components/Navbar';
+import VideoPlayer from '../../components/VideoPlayer';
 import Link from 'next/link';
 
 // React Icons
