@@ -204,6 +204,22 @@ export default function BasketballMatchPage() {
 
             <div className="container max-w-6xl mx-auto px-4 py-4 sm:py-6">
 
+                {/* ========== BANNERS ========== */}
+                <div className="mb-4 space-y-2">
+                    {BANNERS.slice(0, 2).map((banner) => (
+                        <div key={banner.id} className="banner-slot">
+                            <a href={banner.link} target="_blank" rel="noopener">
+                                <img
+                                    src={banner.src}
+                                    alt={`Banner ${banner.id}`}
+                                    className="w-full rounded-lg hover:opacity-90 transition-opacity"
+                                    onError={(e) => e.target.parentElement.parentElement.style.display = 'none'}
+                                />
+                            </a>
+                        </div>
+                    ))}
+                </div>
+
                 {/* ========== VIDEO PLAYER ========== */}
                 {showPlayer && streamUrl ? (
                     <div className="mb-4 sm:mb-6">
@@ -285,22 +301,6 @@ export default function BasketballMatchPage() {
                         </div>
                     </div>
                 )}
-
-                {/* ========== BANNERS ========== */}
-                <div className="mb-4 space-y-2">
-                    {BANNERS.slice(0, 2).map((banner) => (
-                        <div key={banner.id} className="banner-slot">
-                            <a href={banner.link} target="_blank" rel="noopener">
-                                <img
-                                    src={banner.src}
-                                    alt={`Banner ${banner.id}`}
-                                    className="w-full rounded-lg hover:opacity-90 transition-opacity"
-                                    onError={(e) => e.target.parentElement.parentElement.style.display = 'none'}
-                                />
-                            </a>
-                        </div>
-                    ))}
-                </div>
 
                 {/* ========== MATCH DETAILS ========== */}
                 <div className="flex flex-col">
