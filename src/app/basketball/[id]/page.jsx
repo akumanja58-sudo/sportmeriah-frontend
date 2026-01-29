@@ -68,7 +68,7 @@ export default function NbaMatchPage() {
 
     const fetchMatch = async () => {
         try {
-            const res = await fetch(`${API_URL}/api/nba`);
+            const res = await fetch(`${API_URL}/api/basketball`);
             const data = await res.json();
 
             if (data.success && data.matches) {
@@ -156,7 +156,7 @@ export default function NbaMatchPage() {
                 <div className="container max-w-6xl mx-auto px-4 py-6 flex flex-col items-center justify-center min-h-[60vh]">
                     <p className="text-4xl mb-4">🏀</p>
                     <p className="text-gray-400 mb-4">Pertandingan tidak ditemukan</p>
-                    <Link href="/nba" className="text-orange-500 hover:underline">
+                    <Link href="/basketball" className="text-orange-500 hover:underline">
                         ← Kembali ke NBA
                     </Link>
                 </div>
@@ -265,7 +265,7 @@ export default function NbaMatchPage() {
                                         {isFinished ? 'Pertandingan telah selesai' : 'Stream belum tersedia'}
                                     </p>
                                     <Link
-                                        href="/nba"
+                                        href="/basketball"
                                         className="text-orange-500 hover:text-orange-400 text-sm"
                                     >
                                         ← Kembali ke NBA
@@ -405,7 +405,7 @@ export default function NbaMatchPage() {
                                 <li>
                                     <div className="flex items-center">
                                         <span className="mx-1">/</span>
-                                        <Link href="/nba" className="hover:text-white">NBA</Link>
+                                        <Link href="/basketball" className="hover:text-white">NBA</Link>
                                     </div>
                                 </li>
                                 <li aria-current="page">
@@ -441,7 +441,7 @@ export default function NbaMatchPage() {
                             {otherMatches.map((m) => (
                                 <Link
                                     key={m.id}
-                                    href={`/nba/${m.id}?stream=${m.stream.streamId}`}
+                                    href={`/basketball/${m.id}?stream=${m.stream.streamId}`}
                                     className="block bg-gray-700 p-3 sm:p-4 rounded-lg shadow-md transition-all hover:bg-gray-600 flex justify-between items-center"
                                 >
                                     <span className="text-sm sm:text-base font-medium text-white truncate pr-4">
@@ -465,7 +465,7 @@ export default function NbaMatchPage() {
                         <IoHome size={22} />
                         <span className="text-[10px] sm:text-xs mt-1">Beranda</span>
                     </Link>
-                    <Link href="/nba" className="flex flex-col items-center px-2 sm:px-4 py-2 text-gray-400 hover:text-orange-400 transition-colors">
+                    <Link href="/basketball" className="flex flex-col items-center px-2 sm:px-4 py-2 text-gray-400 hover:text-orange-400 transition-colors">
                         <MdSportsBasketball size={22} />
                         <span className="text-[10px] sm:text-xs mt-1">NBA</span>
                     </Link>

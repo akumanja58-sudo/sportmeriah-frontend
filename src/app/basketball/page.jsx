@@ -55,7 +55,7 @@ export default function NbaPage() {
 
     const fetchMatches = async () => {
         try {
-            const res = await fetch(`${API_URL}/api/nba`);
+            const res = await fetch(`${API_URL}/api/basketball`);
             const data = await res.json();
 
             if (data.success && data.matches) {
@@ -271,7 +271,7 @@ export default function NbaPage() {
                         <IoHome size={22} />
                         <span className="text-[10px] sm:text-xs mt-1">Beranda</span>
                     </Link>
-                    <Link href="/nba" className="flex flex-col items-center px-2 sm:px-4 py-2 text-orange-400">
+                    <Link href="/basketball" className="flex flex-col items-center px-2 sm:px-4 py-2 text-orange-400">
                         <MdSportsBasketball size={22} />
                         <span className="text-[10px] sm:text-xs mt-1">NBA</span>
                     </Link>
@@ -299,8 +299,8 @@ function NbaMatchCard({ match, isLive, isFinished = false }) {
 
     // Link ke player page
     const matchUrl = hasStream
-        ? `/nba/${id}?stream=${stream.streamId}`
-        : `/nba/${id}`;
+        ? `/basketball/${id}?stream=${stream.streamId}`
+        : `/basketball/${id}`;
 
     // Get quarter info
     const getQuarterDisplay = () => {
