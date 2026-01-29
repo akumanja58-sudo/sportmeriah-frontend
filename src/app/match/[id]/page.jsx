@@ -12,8 +12,12 @@ import { IoHome } from 'react-icons/io5';
 import { MdLiveTv } from 'react-icons/md';
 
 const API_URL = 'https://sportmeriah-backend-production.up.railway.app';
-const VPS_IP = '173.249.27.15';
-const SITE_URL = 'https://sportmeriah.com';
+
+// IPTV Config - Direct HTTPS
+const IPTV_SERVER = 'https://s.rocketdns.info';
+const IPTV_USER = '8297117';
+const IPTV_PASS = '4501185';
+const SITE_URL = 'https://www.sportmeriah.com/';
 
 // Banner images
 const BANNERS = [
@@ -99,20 +103,14 @@ export default function MatchPage() {
 
         try {
             setStreamLoading(true);
-            const res = await fetch(`${API_URL}/api/streams/start/${streamId}`);
-            const data = await res.json();
 
-            if (data.success && data.stream_url) {
-                setStreamUrl(data.stream_url);
-                setShowPlayer(true);
-            } else {
-                setStreamUrl(`http://${VPS_IP}/hls/${streamId}.m3u8`);
-                setShowPlayer(true);
-            }
+            // Direct IPTV HTTPS URL - no VPS needed!
+            const directUrl = `${IPTV_SERVER}/live/${IPTV_USER}/${IPTV_PASS}/${streamId}.m3u8`;
+
+            setStreamUrl(directUrl);
+            setShowPlayer(true);
         } catch (error) {
             console.error('Failed to start stream:', error);
-            setStreamUrl(`http://${VPS_IP}/hls/${streamId}.m3u8`);
-            setShowPlayer(true);
         } finally {
             setStreamLoading(false);
         }
