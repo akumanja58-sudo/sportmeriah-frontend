@@ -208,11 +208,7 @@ export default function BasketballMatchPage() {
                 {showPlayer && streamUrl ? (
                     <div className="mb-4 sm:mb-6">
                         <div className="relative bg-black rounded-lg overflow-hidden aspect-video">
-                            <VideoPlayer
-                                src={streamUrl || ''}
-                                autoPlay={true}
-                                title={matchTitle || 'NBA Game'}
-                            />
+                            <VideoPlayer streamUrl={streamUrl || ''} />
                         </div>
                     </div>
                 ) : (
