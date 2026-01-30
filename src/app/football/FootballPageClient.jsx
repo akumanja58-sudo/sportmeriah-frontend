@@ -28,11 +28,14 @@ export default function FootballPageClient() {
             const data = await response.json();
 
             if (data.success) {
-                setStreams(data.streams);
+                setStreams({
+                    live: data.matches?.live || [],
+                    all: [...(data.matches?.upcoming || []), ...(data.extraChannels || [])]
+                });
                 setCategories(data.categories || []);
                 setStats({
-                    total: data.total,
-                    liveCount: data.liveCount
+                    total: data.stats?.total || 0,
+                    liveCount: data.stats?.live || 0
                 });
             } else {
                 setError(data.error || 'Failed to fetch streams');
