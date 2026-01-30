@@ -14,10 +14,10 @@ import { MdLiveTv } from 'react-icons/md';
 const API_URL = 'https://sportmeriah-backend-production.up.railway.app';
 
 // IPTV Config - NigmaTV
-const IPTV_SERVER = 'http://cf.business-cdn-8k.ru';
+const IPTV_SERVER = 'https://cf.business-cdn-8k.ru';
 const IPTV_USER = 'd6bc5a36b788';
 const IPTV_PASS = '884f0649bc';
-const SITE_URL = 'https://sportmeriah.com';
+const SITE_URL = 'https://www.sportmeriah.com';
 
 // Banner images
 const BANNERS = [
