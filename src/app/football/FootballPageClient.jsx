@@ -240,14 +240,24 @@ export default function FootballPageClient() {
 
 // Stream Card Component
 function StreamCard({ stream, isLive }) {
+    // Handle both formats (API Sports match or IPTV channel)
+    const matchName = stream.homeTeam
+        ? `${stream.homeTeam.name} vs ${stream.awayTeam.name}`
+        : stream.name || 'Unknown Match';
+
+    const leagueName = stream.league?.name || stream.category?.name || 'Football';
+
+    // Use fixture ID for API Sports match, stream ID for IPTV channel
+    const linkId = stream.stream?.id || stream.id;
+
     return (
         <Link
-            href={`/football/${stream.id}`}
+            href={`/football/${linkId}`}
             className="block bg-gray-800 hover:bg-gray-750 rounded-lg overflow-hidden transition hover:scale-[1.02] hover:shadow-lg hover:shadow-green-500/10"
         >
             <div className="p-4">
                 <div className="flex items-start justify-between gap-2 mb-2">
-                    <h3 className="font-semibold line-clamp-2">{stream.name}</h3>
+                    <h3 className="font-semibold line-clamp-2">{matchName}</h3>
                     {isLive && (
                         <span className="bg-red-600 px-2 py-0.5 rounded text-xs whitespace-nowrap animate-pulse">
                             LIVE
@@ -257,7 +267,7 @@ function StreamCard({ stream, isLive }) {
 
                 <div className="flex items-center justify-between text-sm">
                     <span className="text-gray-400 text-xs bg-gray-700 px-2 py-0.5 rounded">
-                        {stream.category?.name || 'Football'}
+                        {leagueName}
                     </span>
 
                     <span className="text-green-400 text-xs">
