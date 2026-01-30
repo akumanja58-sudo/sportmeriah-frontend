@@ -1,49 +1,32 @@
-// app/football/page.jsx
-// SERVER COMPONENT - untuk SEO metadata
-
+import { Metadata } from 'next';
 import FootballPageClient from './FootballPageClient';
 
 export const metadata = {
-    title: 'Live Streaming Sepakbola - Jadwal & Skor Bola Hari Ini',
-    description: 'Nonton live streaming sepakbola gratis di SportMeriah. Premier League, La Liga, Serie A, Bundesliga, Champions League, Europa League. Jadwal lengkap & skor live!',
-    keywords: [
-        'streaming bola gratis',
-        'nonton bola online',
-        'live streaming sepakbola',
-        'jadwal bola hari ini',
-        'skor bola live',
-        'streaming premier league',
-        'nonton la liga',
-        'live streaming champions league',
-        'streaming serie a',
-        'nonton bundesliga',
-        'streaming europa league'
-    ],
+    title: 'Live Streaming Football Gratis - Premier League, La Liga, Serie A | SportMeriah',
+    description: 'Nonton live streaming football gratis di SportMeriah. Premier League, La Liga, Serie A, UEFA Champions League, MLS dan liga sepakbola lainnya dengan kualitas HD.',
+    keywords: 'streaming bola gratis, live football, premier league streaming, la liga live, serie a streaming, uefa champions league, nonton bola online, live sepakbola',
     openGraph: {
-        title: '⚽ Live Streaming Sepakbola - SportMeriah',
-        description: 'Nonton live streaming sepakbola gratis. Premier League, La Liga, Serie A, Champions League!',
-        url: 'https://www.sportmeriah.com/football',
-        siteName: 'SportMeriah',
+        title: 'Live Streaming Football Gratis | SportMeriah',
+        description: 'Nonton live streaming football gratis - Premier League, La Liga, Serie A, UEFA Champions League',
+        type: 'website',
+        url: 'https://sportmeriah.com/football',
         images: [
             {
-                url: '/og-image.png',
+                url: 'https://sportmeriah.com/og-football.jpg',
                 width: 1200,
                 height: 630,
-                alt: 'SportMeriah - Streaming Sepakbola Gratis',
-            },
-        ],
-        locale: 'id_ID',
-        type: 'website',
+                alt: 'SportMeriah Football Streaming'
+            }
+        ]
     },
     twitter: {
         card: 'summary_large_image',
-        title: '⚽ Live Streaming Sepakbola - SportMeriah',
-        description: 'Nonton live streaming sepakbola gratis!',
-        images: ['/og-image.png'],
+        title: 'Live Streaming Football Gratis | SportMeriah',
+        description: 'Nonton live streaming football gratis - Premier League, La Liga, Serie A, UEFA Champions League'
     },
     alternates: {
-        canonical: 'https://www.sportmeriah.com/football',
-    },
+        canonical: 'https://sportmeriah.com/football'
+    }
 };
 
 export default function FootballPage() {
