@@ -1,52 +1,108 @@
 {
-  "name": "SportMeriah - Streaming Bola Gratis",
+  "name": "SportMeriah - Streaming Bola & Olahraga Gratis",
   "short_name": "SportMeriah",
-  "description": "Nonton live streaming bola dan olahraga gratis. Kualitas HD, tanpa buffering!",
+  "description": "Nonton live streaming bola dan olahraga gratis. Premier League, La Liga, Serie A, Champions League, NBA Basketball.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#111827",
+  "background_color": "#1f2937",
   "theme_color": "#1f2937",
   "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "id",
+  "categories": [
+    "sports",
+    "entertainment"
+  ],
   "icons": [
     {
       "src": "/icons/icon-72x72.png",
       "sizes": "72x72",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "maskable any"
     },
     {
       "src": "/icons/icon-96x96.png",
       "sizes": "96x96",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "maskable any"
     },
     {
       "src": "/icons/icon-128x128.png",
       "sizes": "128x128",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "maskable any"
     },
     {
       "src": "/icons/icon-144x144.png",
       "sizes": "144x144",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "maskable any"
     },
     {
       "src": "/icons/icon-152x152.png",
       "sizes": "152x152",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "maskable any"
     },
     {
       "src": "/icons/icon-192x192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "maskable any"
     },
     {
       "src": "/icons/icon-384x384.png",
       "sizes": "384x384",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "maskable any"
     },
     {
       "src": "/icons/icon-512x512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "maskable any"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshots/home.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "SportMeriah Homepage"
+    },
+    {
+      "src": "/screenshots/match.png",
+      "sizes": "720x1280",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Live Match Streaming"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Sepakbola",
+      "short_name": "Football",
+      "description": "Lihat jadwal sepakbola",
+      "url": "/football",
+      "icons": [
+        {
+          "src": "/icons/football.png",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "NBA Basketball",
+      "short_name": "NBA",
+      "description": "Lihat jadwal NBA",
+      "url": "/basketball",
+      "icons": [
+        {
+          "src": "/icons/basketball.png",
+          "sizes": "96x96"
+        }
+      ]
     }
   ]
 }

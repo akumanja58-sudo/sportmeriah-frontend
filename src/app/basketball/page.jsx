@@ -1,3 +1,72 @@
+export const metadata = {
+    title: 'Live Streaming NBA Basketball - Jadwal & Skor NBA Hari Ini',
+    description: 'Nonton live streaming NBA Basketball gratis di SportMeriah. Jadwal lengkap pertandingan NBA, skor live, dan streaming HD tanpa buffering!',
+    keywords: [
+        'streaming NBA gratis',
+        'nonton NBA online',
+        'live streaming basketball',
+        'jadwal NBA hari ini',
+        'skor NBA live',
+        'streaming basketball gratis',
+        'nonton Lakers',
+        'nonton Warriors',
+        'nonton Celtics',
+        'NBA live stream',
+        'basketball streaming',
+        'jadwal NBA 2026'
+    ],
+    openGraph: {
+        title: '🏀 Live Streaming NBA Basketball - SportMeriah',
+        description: 'Nonton live streaming NBA Basketball gratis. Lakers, Warriors, Celtics & semua tim NBA!',
+        url: 'https://www.sportmeriah.com/basketball',
+        siteName: 'SportMeriah',
+        images: [
+            {
+                url: '/og-basketball.png',
+                width: 1200,
+                height: 630,
+                alt: 'SportMeriah - Streaming NBA Gratis',
+            },
+        ],
+        locale: 'id_ID',
+        type: 'website',
+    },
+    twitter: {
+        card: 'summary_large_image',
+        title: '🏀 Live Streaming NBA Basketball - SportMeriah',
+        description: 'Nonton live streaming NBA Basketball gratis di SportMeriah!',
+        images: ['/og-basketball.png'],
+    },
+    alternates: {
+        canonical: 'https://www.sportmeriah.com/basketball',
+    },
+};
+
+// JSON-LD for Basketball page
+export const basketballJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    'name': 'Live Streaming NBA Basketball',
+    'description': 'Koleksi streaming NBA Basketball live',
+    'url': 'https://www.sportmeriah.com/basketball',
+    'isPartOf': {
+        '@type': 'WebSite',
+        'name': 'SportMeriah',
+        'url': 'https://www.sportmeriah.com'
+    },
+    'about': {
+        '@type': 'SportsOrganization',
+        'name': 'NBA',
+        'sport': 'Basketball',
+        'sameAs': 'https://www.nba.com'
+    },
+    'mainEntity': {
+        '@type': 'ItemList',
+        'name': 'Jadwal Pertandingan NBA',
+        'description': 'Daftar pertandingan NBA hari ini'
+    }
+};
+
 'use client';
 
 import { useEffect, useState } from 'react';

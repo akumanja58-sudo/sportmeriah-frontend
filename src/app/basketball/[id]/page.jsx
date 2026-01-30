@@ -1,3 +1,126 @@
+// ========== DYNAMIC METADATA FOR SEO ==========
+export async function generateMetadata({ params, searchParams }) {
+    const matchId = params.id;
+
+    try {
+        const res = await fetch(
+            `https://sportmeriah-backend-production.up.railway.app/api/basketball`,
+            { next: { revalidate: 60 } }
+        );
+        const data = await res.json();
+
+        if (data.success && data.matches) {
+            const match = data.matches.find(m => m.id === parseInt(matchId));
+
+            if (match) {
+                const homeTeam = match.homeTeam?.name || 'Home';
+                const awayTeam = match.awayTeam?.name || 'Away';
+                const matchTitle = `${homeTeam} vs ${awayTeam}`;
+
+                return {
+                    title: `Live Streaming ${matchTitle} - NBA Basketball`,
+                    description: `Nonton live streaming NBA ${matchTitle} gratis di SportMeriah. Pertandingan NBA Basketball dengan kualitas HD tanpa buffering. Saksikan sekarang!`,
+                    keywords: [
+                        `streaming ${homeTeam}`,
+                        `streaming ${awayTeam}`,
+                        `${homeTeam} vs ${awayTeam}`,
+                        `live NBA ${matchTitle}`,
+                        'nonton NBA gratis',
+                        'streaming basketball gratis',
+                        'live streaming NBA',
+                        'NBA live stream'
+                    ],
+                    openGraph: {
+                        title: `🏀 LIVE: ${matchTitle} - NBA`,
+                        description: `Nonton live streaming NBA ${matchTitle} gratis. Basketball dengan kualitas HD!`,
+                        url: `https://www.sportmeriah.com/basketball/${matchId}`,
+                        siteName: 'SportMeriah',
+                        images: [
+                            {
+                                url: match.homeTeam?.logo || '/og-image.png',
+                                width: 200,
+                                height: 200,
+                                alt: homeTeam,
+                            },
+                        ],
+                        locale: 'id_ID',
+                        type: 'website',
+                    },
+                    twitter: {
+                        card: 'summary',
+                        title: `🏀 LIVE: ${matchTitle} - NBA`,
+                        description: `Nonton live streaming NBA ${matchTitle} gratis di SportMeriah!`,
+                        images: [match.homeTeam?.logo || '/og-image.png'],
+                    },
+                    alternates: {
+                        canonical: `https://www.sportmeriah.com/basketball/${matchId}`,
+                    },
+                    robots: {
+                        index: true,
+                        follow: true,
+                    },
+                };
+            }
+        }
+    } catch (error) {
+        console.error('Error generating metadata:', error);
+    }
+
+    // Fallback metadata
+    return {
+        title: 'Live Streaming NBA Basketball',
+        description: 'Nonton live streaming NBA Basketball gratis di SportMeriah dengan kualitas HD.',
+    };
+}
+
+// ========== JSON-LD FOR SPORTS EVENT ==========
+export function generateBasketballJsonLd(match) {
+    if (!match) return null;
+
+    const homeTeam = match.homeTeam?.name || 'Home';
+    const awayTeam = match.awayTeam?.name || 'Away';
+    const startDate = match.date || new Date().toISOString();
+
+    return {
+        '@context': 'https://schema.org',
+        '@type': 'SportsEvent',
+        'name': `${homeTeam} vs ${awayTeam}`,
+        'description': `NBA Basketball: ${homeTeam} melawan ${awayTeam}`,
+        'startDate': startDate,
+        'eventStatus': 'https://schema.org/EventScheduled',
+        'eventAttendanceMode': 'https://schema.org/OnlineEventAttendanceMode',
+        'location': {
+            '@type': 'VirtualLocation',
+            'url': `https://www.sportmeriah.com/basketball/${match.id}`
+        },
+        'organizer': {
+            '@type': 'SportsOrganization',
+            'name': 'NBA',
+        },
+        'competitor': [
+            {
+                '@type': 'SportsTeam',
+                'name': homeTeam,
+                'image': match.homeTeam?.logo
+            },
+            {
+                '@type': 'SportsTeam',
+                'name': awayTeam,
+                'image': match.awayTeam?.logo
+            }
+        ],
+        'sport': 'Basketball',
+        'offers': {
+            '@type': 'Offer',
+            'price': '0',
+            'priceCurrency': 'IDR',
+            'availability': 'https://schema.org/InStock',
+            'url': `https://www.sportmeriah.com/basketball/${match.id}`,
+            'validFrom': startDate
+        }
+    };
+}
+
 'use client';
 
 import { useEffect, useState } from 'react';
