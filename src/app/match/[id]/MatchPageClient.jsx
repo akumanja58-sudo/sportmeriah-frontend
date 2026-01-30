@@ -40,8 +40,6 @@ function formatKickoffTime(dateString) {
 }
 
 export default function MatchPageClient({ params, searchParams }) {
-    const params = useParams();
-    const searchParams = useSearchParams();
 
     const fixtureId = params.id;
     const streamIdFromUrl = searchParams.get('stream');

@@ -48,9 +48,7 @@ function formatKickoffTime(dateString) {
 }
 
 export default function BasketballMatchPageClient({ params, searchParams }) {
-    const params = useParams();
-    const searchParams = useSearchParams();
-
+    // LANGSUNG PAKE params dan searchParams dari props
     const matchId = params?.id;
     const streamIdFromUrl = searchParams?.get('stream');
 
