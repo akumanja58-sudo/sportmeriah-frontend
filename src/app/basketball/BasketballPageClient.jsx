@@ -1,72 +1,3 @@
-export const metadata = {
-    title: 'Live Streaming NBA Basketball - Jadwal & Skor NBA Hari Ini',
-    description: 'Nonton live streaming NBA Basketball gratis di SportMeriah. Jadwal lengkap pertandingan NBA, skor live, dan streaming HD tanpa buffering!',
-    keywords: [
-        'streaming NBA gratis',
-        'nonton NBA online',
-        'live streaming basketball',
-        'jadwal NBA hari ini',
-        'skor NBA live',
-        'streaming basketball gratis',
-        'nonton Lakers',
-        'nonton Warriors',
-        'nonton Celtics',
-        'NBA live stream',
-        'basketball streaming',
-        'jadwal NBA 2026'
-    ],
-    openGraph: {
-        title: '🏀 Live Streaming NBA Basketball - SportMeriah',
-        description: 'Nonton live streaming NBA Basketball gratis. Lakers, Warriors, Celtics & semua tim NBA!',
-        url: 'https://www.sportmeriah.com/basketball',
-        siteName: 'SportMeriah',
-        images: [
-            {
-                url: '/og-basketball.png',
-                width: 1200,
-                height: 630,
-                alt: 'SportMeriah - Streaming NBA Gratis',
-            },
-        ],
-        locale: 'id_ID',
-        type: 'website',
-    },
-    twitter: {
-        card: 'summary_large_image',
-        title: '🏀 Live Streaming NBA Basketball - SportMeriah',
-        description: 'Nonton live streaming NBA Basketball gratis di SportMeriah!',
-        images: ['/og-basketball.png'],
-    },
-    alternates: {
-        canonical: 'https://www.sportmeriah.com/basketball',
-    },
-};
-
-// JSON-LD for Basketball page
-export const basketballJsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'CollectionPage',
-    'name': 'Live Streaming NBA Basketball',
-    'description': 'Koleksi streaming NBA Basketball live',
-    'url': 'https://www.sportmeriah.com/basketball',
-    'isPartOf': {
-        '@type': 'WebSite',
-        'name': 'SportMeriah',
-        'url': 'https://www.sportmeriah.com'
-    },
-    'about': {
-        '@type': 'SportsOrganization',
-        'name': 'NBA',
-        'sport': 'Basketball',
-        'sameAs': 'https://www.nba.com'
-    },
-    'mainEntity': {
-        '@type': 'ItemList',
-        'name': 'Jadwal Pertandingan NBA',
-        'description': 'Daftar pertandingan NBA hari ini'
-    }
-};
-
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -110,7 +41,7 @@ function formatKickoffTime(dateString) {
     return `${hours}:${minutes} WIB`;
 }
 
-export default function NbaPage() {
+export default function BasketballPageClient() {
     const [matches, setMatches] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -138,9 +69,9 @@ export default function NbaPage() {
     };
 
     // Separate LIVE, Upcoming, and Finished
-    const liveMatches = matches.filter(m => isLiveStatus(m.status.short));
-    const upcomingMatches = matches.filter(m => isUpcomingStatus(m.status.short));
-    const finishedMatches = matches.filter(m => isFinishedStatus(m.status.short));
+    const liveMatches = matches.filter(m => isLiveStatus(m.status?.short));
+    const upcomingMatches = matches.filter(m => isUpcomingStatus(m.status?.short));
+    const finishedMatches = matches.filter(m => isFinishedStatus(m.status?.short));
 
     return (
         <main className="min-h-screen bg-gray-900">
@@ -366,13 +297,13 @@ function NbaMatchCard({ match, isLive, isFinished = false }) {
 
     // Get quarter info
     const getQuarterDisplay = () => {
-        if (status.short === 'Q1') return 'Q1';
-        if (status.short === 'Q2') return 'Q2';
-        if (status.short === 'Q3') return 'Q3';
-        if (status.short === 'Q4') return 'Q4';
-        if (status.short === 'OT') return 'OT';
-        if (status.short === 'HT') return 'HT';
-        if (status.short === 'BT') return 'Break';
+        if (status?.short === 'Q1') return 'Q1';
+        if (status?.short === 'Q2') return 'Q2';
+        if (status?.short === 'Q3') return 'Q3';
+        if (status?.short === 'Q4') return 'Q4';
+        if (status?.short === 'OT') return 'OT';
+        if (status?.short === 'HT') return 'HT';
+        if (status?.short === 'BT') return 'Break';
         return '';
     };
 
@@ -404,11 +335,11 @@ function NbaMatchCard({ match, isLive, isFinished = false }) {
                     {/* Home Team */}
                     <div className="flex items-center gap-2 flex-1 min-w-0 justify-end">
                         <span className="text-white text-xs sm:text-sm font-medium truncate text-right">
-                            {homeTeam.name}
+                            {homeTeam?.name}
                         </span>
                         <img
-                            src={homeTeam.logo}
-                            alt={homeTeam.name}
+                            src={homeTeam?.logo}
+                            alt={homeTeam?.name}
                             className="w-6 h-6 sm:w-8 sm:h-8 object-contain flex-shrink-0"
                             onError={(e) => e.target.src = 'https://placehold.co/32x32/374151/ffffff?text=🏀'}
                         />
@@ -418,7 +349,7 @@ function NbaMatchCard({ match, isLive, isFinished = false }) {
                     <div className="flex-shrink-0 px-2">
                         {(isLive || isFinished) && scores?.home?.total !== null ? (
                             <span className={`text-sm sm:text-base font-bold ${isFinished ? 'text-gray-400' : 'text-white'}`}>
-                                {scores.home.total ?? 0} - {scores.away.total ?? 0}
+                                {scores?.home?.total ?? 0} - {scores?.away?.total ?? 0}
                             </span>
                         ) : (
                             <span className="text-gray-400 text-xs sm:text-sm font-bold">VS</span>
@@ -428,13 +359,13 @@ function NbaMatchCard({ match, isLive, isFinished = false }) {
                     {/* Away Team */}
                     <div className="flex items-center gap-2 flex-1 min-w-0">
                         <img
-                            src={awayTeam.logo}
-                            alt={awayTeam.name}
+                            src={awayTeam?.logo}
+                            alt={awayTeam?.name}
                             className="w-6 h-6 sm:w-8 sm:h-8 object-contain flex-shrink-0"
                             onError={(e) => e.target.src = 'https://placehold.co/32x32/374151/ffffff?text=🏀'}
                         />
                         <span className="text-white text-xs sm:text-sm font-medium truncate">
-                            {awayTeam.name}
+                            {awayTeam?.name}
                         </span>
                     </div>
 
