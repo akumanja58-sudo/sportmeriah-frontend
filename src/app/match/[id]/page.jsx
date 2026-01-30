@@ -13,12 +13,6 @@ import { MdLiveTv } from 'react-icons/md';
 
 const API_URL = 'https://sportmeriah-backend-production.up.railway.app';
 
-// IPTV Config - NigmaTV
-const IPTV_SERVER = 'https://cf.business-cdn-8k.ru';
-const IPTV_USER = 'd6bc5a36b788';
-const IPTV_PASS = '884f0649bc';
-const SITE_URL = 'https://www.sportmeriah.com';
-
 // Banner images
 const BANNERS = [
     { id: 1, src: 'https://inigambarku.site/images/2026/01/20/GIFMERIAH4D965a1f7cfb6a4aac.gif', link: '#' },
@@ -105,7 +99,7 @@ export default function MatchPage() {
             setStreamLoading(true);
 
             // Direct IPTV HTTPS URL - no VPS needed!
-            const directUrl = `${IPTV_SERVER}/live/${IPTV_USER}/${IPTV_PASS}/${streamId}.m3u8`;
+            const directUrl = `${API_URL}/api/stream/${streamId}.m3u8`;
 
             setStreamUrl(directUrl);
             setShowPlayer(true);
