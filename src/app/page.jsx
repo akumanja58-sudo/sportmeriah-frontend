@@ -24,6 +24,75 @@ import { IoHome, IoCalendar } from 'react-icons/io5';
 
 const API_URL = 'https://sportmeriah-backend-production.up.railway.app';
 
+// Priority leagues (liga besar yang diprioritaskan) - EXACT NAMES
+const PRIORITY_LEAGUES_FOOTBALL = [
+    // Top European Competitions
+    'UEFA Champions League',
+    'UEFA Europa League',
+    'UEFA Europa Conference League',
+    'UEFA Super Cup',
+    // Top 5 Leagues
+    'Premier League',           // England (exact match, bukan "Sudani Premier League")
+    'La Liga',                  // Spain
+    'Serie A',                  // Italy
+    'Bundesliga',               // Germany
+    'Ligue 1',                  // France
+    // Other Major Leagues
+    'Eredivisie',               // Netherlands
+    'Primeira Liga',            // Portugal
+    'Super Lig',                // Turkey
+    'Saudi Pro League',         // Saudi
+    'MLS',                      // USA
+    'Liga 1',                   // Indonesia
+    // Cups
+    'FA Cup',
+    'EFL Cup',
+    'Carabao Cup',
+    'Copa del Rey',
+    'Coppa Italia',
+    'DFB Pokal',
+    'Coupe de France',
+    // International
+    'World Cup',
+    'Euro Championship',
+    'Copa America',
+    'AFC Champions League',
+    'AFC Cup',
+    'CONMEBOL Libertadores',
+    'CONMEBOL Sudamericana',
+];
+
+const PRIORITY_LEAGUES_BASKETBALL = [
+    'NBA',
+    'NBA - Play In Tournament',
+    'NBA - Playoffs',
+    'NBA - Finals',
+    'EuroLeague',
+    'NCAA',
+    'NBA Cup',
+];
+
+// Sort matches by league priority - EXACT MATCH
+function sortByLeaguePriority(matches, priorityList) {
+    return [...matches].sort((a, b) => {
+        const leagueA = a.league?.name || '';
+        const leagueB = b.league?.name || '';
+
+        // EXACT MATCH - bukan includes()
+        const priorityA = priorityList.findIndex(l => leagueA === l);
+        const priorityB = priorityList.findIndex(l => leagueB === l);
+
+        // Jika keduanya ada di priority list, sort by priority
+        if (priorityA !== -1 && priorityB !== -1) return priorityA - priorityB;
+        // Jika hanya A yang ada di priority, A duluan
+        if (priorityA !== -1) return -1;
+        // Jika hanya B yang ada di priority, B duluan
+        if (priorityB !== -1) return 1;
+        // Jika keduanya tidak ada, sort by date
+        return new Date(a.date) - new Date(b.date);
+    });
+}
+
 // Sport Categories dengan react-icons
 const SPORT_CATEGORIES = [
     { id: 'football', name: 'Sepakbola', icon: MdSportsSoccer, color: '#22c55e' },
@@ -62,58 +131,6 @@ const BANNERS = [
     { id: 3, src: 'https://inigambarku.site/images/2026/01/20/promo-girang4d.gif', link: '#' },
 ];
 
-// ========== STATUS HELPERS - FOOTBALL ==========
-function isLiveStatusFootball(status) {
-    const liveStatuses = ['1H', '2H', 'HT', 'ET', 'P', 'LIVE', 'BT'];
-    return liveStatuses.includes(status);
-}
-
-function isFinishedStatusFootball(status) {
-    const finishedStatuses = ['FT', 'AET', 'PEN', 'AWD', 'WO'];
-    return finishedStatuses.includes(status);
-}
-
-function isUpcomingStatusFootball(status) {
-    return status === 'NS';
-}
-
-// ========== STATUS HELPERS - BASKETBALL ==========
-function isLiveStatusBasketball(status) {
-    const liveStatuses = ['Q1', 'Q2', 'Q3', 'Q4', 'OT', 'HT', 'BT', 'LIVE'];
-    return liveStatuses.includes(status);
-}
-
-function isFinishedStatusBasketball(status) {
-    const finishedStatuses = ['FT', 'AOT', 'POST'];
-    return finishedStatuses.includes(status);
-}
-
-function isUpcomingStatusBasketball(status) {
-    return status === 'NS' || status === 'SCH';
-}
-
-// ========== STATUS HELPERS - TENNIS (api-tennis.com format) ==========
-function isLiveStatusTennis(match) {
-    // api-tennis.com uses event_live: '1' for live matches
-    if (match.status?.live === true || match.status?.live === '1') return true;
-
-    const status = (match.status?.short || match.status?.long || '').toUpperCase();
-    const liveStatuses = ['SET 1', 'SET 2', 'SET 3', 'SET 4', 'SET 5', 'LIVE', 'IN PROGRESS', 'PLAYING'];
-    return liveStatuses.some(s => status.includes(s));
-}
-
-function isFinishedStatusTennis(match) {
-    const status = (match.status?.short || match.status?.long || '').toUpperCase();
-    const finishedStatuses = ['FINISHED', 'ENDED', 'RETIRED', 'WALKOVER', 'CANCELLED', 'POSTPONED'];
-    return finishedStatuses.some(s => status.includes(s));
-}
-
-function isUpcomingStatusTennis(match) {
-    if (isLiveStatusTennis(match) || isFinishedStatusTennis(match)) return false;
-    const status = (match.status?.short || match.status?.long || '').toUpperCase();
-    return status === '' || status === 'NS' || status === 'NOT STARTED' || status === 'SCHEDULED';
-}
-
 // ========== FORMAT TIME ==========
 function formatKickoffTime(dateString) {
     if (!dateString) return '-';
@@ -124,9 +141,8 @@ function formatKickoffTime(dateString) {
 }
 
 export default function Home() {
-    const [footballFixtures, setFootballFixtures] = useState([]);
-    const [basketballMatches, setBasketballMatches] = useState([]);
-    const [tennisMatches, setTennisMatches] = useState([]);
+    const [footballData, setFootballData] = useState({ live: [], upcoming: [] });
+    const [basketballData, setBasketballData] = useState({ live: [], upcoming: [] });
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -139,37 +155,41 @@ export default function Home() {
 
     const fetchAllSports = async () => {
         try {
-            // Fetch Football, Basketball & Tennis in parallel
-            const [footballRes, basketballRes, tennisRes] = await Promise.all([
-                fetch(`${API_URL}/api/fixtures/today`).catch(() => ({ ok: false })),
-                fetch(`${API_URL}/api/basketball`).catch(() => ({ ok: false })),
-                fetch(`${API_URL}/api/tennis`).catch(() => ({ ok: false }))
+            // Fetch Football & Basketball in parallel
+            const [footballRes, basketballRes] = await Promise.all([
+                fetch(`${API_URL}/api/football`).catch(() => ({ ok: false })),
+                fetch(`${API_URL}/api/basketball`).catch(() => ({ ok: false }))
             ]);
 
-            // Football - filter yang belum selesai
+            // Football - ONLY with streams + sort by priority
             if (footballRes.ok) {
-                const footballData = await footballRes.json();
-                if (footballData.success && footballData.fixtures) {
-                    const filtered = footballData.fixtures.filter(f => !isFinishedStatusFootball(f.status?.short));
-                    setFootballFixtures(filtered);
+                const data = await footballRes.json();
+                if (data.success && data.matches) {
+                    // Filter hanya yang ada stream
+                    const liveWithStream = (data.matches.live || []).filter(m => m.hasStream || m.stream?.id);
+                    const upcomingWithStream = (data.matches.upcoming || []).filter(m => m.hasStream || m.stream?.id);
+
+                    // Sort by league priority
+                    setFootballData({
+                        live: sortByLeaguePriority(liveWithStream, PRIORITY_LEAGUES_FOOTBALL),
+                        upcoming: sortByLeaguePriority(upcomingWithStream, PRIORITY_LEAGUES_FOOTBALL)
+                    });
                 }
             }
 
-            // Basketball - filter yang belum selesai
+            // Basketball - ONLY with streams + sort by priority
             if (basketballRes.ok) {
-                const basketballData = await basketballRes.json();
-                if (basketballData.success && basketballData.matches) {
-                    const filtered = basketballData.matches.filter(m => !isFinishedStatusBasketball(m.status?.short));
-                    setBasketballMatches(filtered);
-                }
-            }
+                const data = await basketballRes.json();
+                if (data.success && data.matches) {
+                    // Filter hanya yang ada stream
+                    const liveWithStream = (data.matches.live || []).filter(m => m.hasStream || m.stream?.id);
+                    const upcomingWithStream = (data.matches.upcoming || []).filter(m => m.hasStream || m.stream?.id);
 
-            // Tennis - filter yang belum selesai
-            if (tennisRes.ok) {
-                const tennisData = await tennisRes.json();
-                if (tennisData.success && tennisData.matches) {
-                    const filtered = tennisData.matches.filter(m => !isFinishedStatusTennis(m));
-                    setTennisMatches(filtered);
+                    // Sort by league priority
+                    setBasketballData({
+                        live: sortByLeaguePriority(liveWithStream, PRIORITY_LEAGUES_BASKETBALL),
+                        upcoming: sortByLeaguePriority(upcomingWithStream, PRIORITY_LEAGUES_BASKETBALL)
+                    });
                 }
             }
         } catch (error) {
@@ -179,28 +199,15 @@ export default function Home() {
         }
     };
 
-    // Separate LIVE and Upcoming - Football
-    const liveFootball = footballFixtures.filter(f => isLiveStatusFootball(f.status?.short));
-    const upcomingFootball = footballFixtures.filter(f => isUpcomingStatusFootball(f.status?.short));
-
-    // Separate LIVE and Upcoming - Basketball
-    const liveBasketball = basketballMatches.filter(m => isLiveStatusBasketball(m.status?.short));
-    const upcomingBasketball = basketballMatches.filter(m => !isLiveStatusBasketball(m.status?.short) && !isFinishedStatusBasketball(m.status?.short));
-
-    // Separate LIVE and Upcoming - Tennis (using match object instead of status string)
-    const liveTennis = tennisMatches.filter(m => isLiveStatusTennis(m));
-    const upcomingTennis = tennisMatches.filter(m => isUpcomingStatusTennis(m));
-
-    // Combined LIVE matches (semua olahraga)
+    // Combined LIVE matches (Football + Basketball)
     const allLiveMatches = [
-        ...liveFootball.map(f => ({ ...f, sport: 'football' })),
-        ...liveBasketball.map(m => ({ ...m, sport: 'basketball' })),
-        ...liveTennis.map(m => ({ ...m, sport: 'tennis' }))
+        ...footballData.live.map(m => ({ ...m, sport: 'football' })),
+        ...basketballData.live.map(m => ({ ...m, sport: 'basketball' }))
     ];
 
     // Total counts
     const totalLive = allLiveMatches.length;
-    const totalUpcoming = upcomingFootball.length + upcomingBasketball.length + upcomingTennis.length;
+    const totalUpcoming = footballData.upcoming.length + basketballData.upcoming.length;
 
     return (
         <main className="min-h-screen bg-gray-900">
@@ -345,22 +352,16 @@ export default function Home() {
                                             </span>
                                         </h2>
                                         <div className="space-y-3">
-                                            {allLiveMatches.map((match) => (
+                                            {allLiveMatches.map((match, index) => (
                                                 match.sport === 'football' ? (
                                                     <FootballMatchCard
-                                                        key={`football-${match.id}`}
-                                                        fixture={match}
-                                                        isLive={true}
-                                                    />
-                                                ) : match.sport === 'basketball' ? (
-                                                    <BasketballMatchCard
-                                                        key={`basketball-${match.id}`}
+                                                        key={`live-football-${match.id || index}`}
                                                         match={match}
                                                         isLive={true}
                                                     />
                                                 ) : (
-                                                    <TennisMatchCard
-                                                        key={`tennis-${match.id}`}
+                                                    <BasketballMatchCard
+                                                        key={`live-basketball-${match.id || index}`}
                                                         match={match}
                                                         isLive={true}
                                                     />
@@ -371,87 +372,79 @@ export default function Home() {
                                 )}
 
                                 {/* ========== ⚽ FOOTBALL - UPCOMING ========== */}
-                                {upcomingFootball.length > 0 && (
+                                {footballData.upcoming.length > 0 && (
                                     <div className="bg-gray-800 rounded-lg p-4">
                                         <h2 className="text-white font-semibold mb-4 flex items-center gap-2">
                                             <MdSportsSoccer className="text-green-500" size={20} />
-                                            Sepakbola
+                                            Sepakbola - Upcoming
                                             <span className="text-xs text-gray-400 font-normal">
-                                                ({upcomingFootball.length} pertandingan)
+                                                ({footballData.upcoming.length} pertandingan)
                                             </span>
-                                            <Link href="/football" className="ml-auto text-xs text-orange-400 hover:text-orange-300">
+                                            <Link href="/football" className="ml-auto text-xs text-green-400 hover:text-green-300">
                                                 Lihat Semua →
                                             </Link>
                                         </h2>
                                         <div className="space-y-3">
-                                            {upcomingFootball.slice(0, 5).map((fixture) => (
+                                            {footballData.upcoming.slice(0, 10).map((match, index) => (
                                                 <FootballMatchCard
-                                                    key={fixture.id}
-                                                    fixture={fixture}
+                                                    key={`upcoming-football-${match.id || index}`}
+                                                    match={match}
                                                     isLive={false}
                                                 />
                                             ))}
                                         </div>
+                                        {footballData.upcoming.length > 10 && (
+                                            <Link
+                                                href="/football"
+                                                className="block text-center mt-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-green-400 text-sm font-medium transition"
+                                            >
+                                                Lihat {footballData.upcoming.length - 10} Pertandingan Lainnya →
+                                            </Link>
+                                        )}
                                     </div>
                                 )}
 
                                 {/* ========== 🏀 BASKETBALL - UPCOMING ========== */}
-                                {upcomingBasketball.length > 0 && (
+                                {basketballData.upcoming.length > 0 && (
                                     <div className="bg-gray-800 rounded-lg p-4">
                                         <h2 className="text-white font-semibold mb-4 flex items-center gap-2">
                                             <MdSportsBasketball className="text-orange-500" size={20} />
-                                            Basketball (NBA)
+                                            Basketball (NBA) - Upcoming
                                             <span className="text-xs text-gray-400 font-normal">
-                                                ({upcomingBasketball.length} pertandingan)
+                                                ({basketballData.upcoming.length} pertandingan)
                                             </span>
                                             <Link href="/basketball" className="ml-auto text-xs text-orange-400 hover:text-orange-300">
                                                 Lihat Semua →
                                             </Link>
                                         </h2>
                                         <div className="space-y-3">
-                                            {upcomingBasketball.slice(0, 5).map((match) => (
+                                            {basketballData.upcoming.slice(0, 10).map((match, index) => (
                                                 <BasketballMatchCard
-                                                    key={match.id}
+                                                    key={`upcoming-basketball-${match.id || index}`}
                                                     match={match}
                                                     isLive={false}
                                                 />
                                             ))}
                                         </div>
-                                    </div>
-                                )}
-
-                                {/* ========== 🎾 TENNIS - UPCOMING ========== */}
-                                {upcomingTennis.length > 0 && (
-                                    <div className="bg-gray-800 rounded-lg p-4">
-                                        <h2 className="text-white font-semibold mb-4 flex items-center gap-2">
-                                            <MdSportsTennis className="text-yellow-500" size={20} />
-                                            Tennis
-                                            <span className="text-xs text-gray-400 font-normal">
-                                                ({upcomingTennis.length} pertandingan)
-                                            </span>
-                                            <Link href="/tennis" className="ml-auto text-xs text-orange-400 hover:text-orange-300">
-                                                Lihat Semua →
+                                        {basketballData.upcoming.length > 10 && (
+                                            <Link
+                                                href="/basketball"
+                                                className="block text-center mt-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-orange-400 text-sm font-medium transition"
+                                            >
+                                                Lihat {basketballData.upcoming.length - 10} Pertandingan Lainnya →
                                             </Link>
-                                        </h2>
-                                        <div className="space-y-3">
-                                            {upcomingTennis.slice(0, 5).map((match) => (
-                                                <TennisMatchCard
-                                                    key={match.id}
-                                                    match={match}
-                                                    isLive={false}
-                                                />
-                                            ))}
-                                        </div>
+                                        )}
                                     </div>
                                 )}
 
                                 {/* Empty State */}
-                                {footballFixtures.length === 0 && basketballMatches.length === 0 && tennisMatches.length === 0 && (
-                                    <div className="bg-gray-800 rounded-lg p-8 text-center">
-                                        <p className="text-4xl mb-4">😴</p>
-                                        <p className="text-gray-400">Tidak ada pertandingan tersedia saat ini</p>
-                                    </div>
-                                )}
+                                {footballData.live.length === 0 && footballData.upcoming.length === 0 &&
+                                    basketballData.live.length === 0 && basketballData.upcoming.length === 0 && (
+                                        <div className="bg-gray-800 rounded-lg p-8 text-center">
+                                            <p className="text-4xl mb-4">😴</p>
+                                            <p className="text-gray-400">Tidak ada pertandingan tersedia saat ini</p>
+                                        </div>
+                                    )}
                             </>
                         )}
 
@@ -478,13 +471,13 @@ export default function Home() {
                         <IoHome size={22} />
                         <span className="text-[10px] sm:text-xs mt-1">Beranda</span>
                     </Link>
+                    <Link href="/football" className="flex flex-col items-center px-2 sm:px-4 py-2 text-gray-400 hover:text-green-400 transition-colors">
+                        <MdSportsSoccer size={22} />
+                        <span className="text-[10px] sm:text-xs mt-1">Sepakbola</span>
+                    </Link>
                     <Link href="/basketball" className="flex flex-col items-center px-2 sm:px-4 py-2 text-gray-400 hover:text-orange-400 transition-colors">
                         <MdSportsBasketball size={22} />
                         <span className="text-[10px] sm:text-xs mt-1">NBA</span>
-                    </Link>
-                    <Link href="/tennis" className="flex flex-col items-center px-2 sm:px-4 py-2 text-gray-400 hover:text-yellow-400 transition-colors">
-                        <MdSportsTennis size={22} />
-                        <span className="text-[10px] sm:text-xs mt-1">Tennis</span>
                     </Link>
                     <a href="https://t.me/sportmeriah" target="_blank" className="flex flex-col items-center px-2 sm:px-4 py-2 text-gray-400 hover:text-blue-400 transition-colors">
                         <FaTelegram size={22} />
@@ -500,23 +493,21 @@ export default function Home() {
 }
 
 // ========== FOOTBALL MATCH CARD ==========
-function FootballMatchCard({ fixture, isLive }) {
-    const { teams, league, status, goals, stream, date, id } = fixture;
-    const hasStream = !!stream;
+function FootballMatchCard({ match, isLive }) {
+    const { homeTeam, awayTeam, league, score, stream, date, elapsed } = match;
 
-    const matchUrl = hasStream
-        ? `/match/${id}?stream=${stream.stream_id}`
-        : `/match/${id}`;
+    // Link ke player page dengan stream ID
+    const matchUrl = `/football/${stream?.id}`;
 
     return (
         <Link href={matchUrl}>
-            <div className={`bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors cursor-pointer group overflow-hidden relative ${!hasStream ? 'opacity-70' : ''}`}>
+            <div className="bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors cursor-pointer group overflow-hidden relative">
 
                 {/* Live Badge - Top Left */}
                 {isLive && (
                     <div className="absolute top-0 left-0 bg-red-600 text-white text-[10px] px-2 py-0.5 rounded-br font-bold flex items-center gap-1 z-10">
                         <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse"></span>
-                        {status?.elapsed ? `${status.elapsed}'` : 'LIVE'}
+                        {elapsed ? `${elapsed}'` : 'LIVE'}
                     </div>
                 )}
 
@@ -537,11 +528,11 @@ function FootballMatchCard({ fixture, isLive }) {
                     {/* Home Team */}
                     <div className="flex items-center gap-2 flex-1 min-w-0 justify-end">
                         <span className="text-white text-xs sm:text-sm font-medium truncate text-right">
-                            {teams?.home?.name || 'Home'}
+                            {homeTeam?.name || 'Home'}
                         </span>
                         <img
-                            src={teams?.home?.logo}
-                            alt={teams?.home?.name}
+                            src={homeTeam?.logo}
+                            alt={homeTeam?.name}
                             className="w-6 h-6 sm:w-8 sm:h-8 object-contain flex-shrink-0"
                             onError={(e) => e.target.src = 'https://placehold.co/32x32/374151/ffffff?text=⚽'}
                         />
@@ -549,9 +540,9 @@ function FootballMatchCard({ fixture, isLive }) {
 
                     {/* Score / VS */}
                     <div className="flex-shrink-0 px-2">
-                        {isLive ? (
+                        {isLive && score?.home !== null ? (
                             <span className="text-white text-sm sm:text-base font-bold">
-                                {goals?.home ?? 0} - {goals?.away ?? 0}
+                                {score?.home ?? 0} - {score?.away ?? 0}
                             </span>
                         ) : (
                             <span className="text-gray-400 text-xs sm:text-sm font-bold">VS</span>
@@ -561,27 +552,21 @@ function FootballMatchCard({ fixture, isLive }) {
                     {/* Away Team */}
                     <div className="flex items-center gap-2 flex-1 min-w-0">
                         <img
-                            src={teams?.away?.logo}
-                            alt={teams?.away?.name}
+                            src={awayTeam?.logo}
+                            alt={awayTeam?.name}
                             className="w-6 h-6 sm:w-8 sm:h-8 object-contain flex-shrink-0"
                             onError={(e) => e.target.src = 'https://placehold.co/32x32/374151/ffffff?text=⚽'}
                         />
                         <span className="text-white text-xs sm:text-sm font-medium truncate">
-                            {teams?.away?.name || 'Away'}
+                            {awayTeam?.name || 'Away'}
                         </span>
                     </div>
 
                     {/* Tombol Tonton */}
                     <div className="flex-shrink-0 ml-2">
-                        {hasStream ? (
-                            <span className={`text-white text-[10px] sm:text-xs font-bold px-2.5 sm:px-3 py-1.5 rounded transition-colors inline-flex items-center gap-1 ${isLive ? 'bg-red-600 group-hover:bg-red-700' : 'bg-orange-500 group-hover:bg-orange-600'}`}>
-                                {isLive ? 'Tonton ▶' : 'Tonton'}
-                            </span>
-                        ) : (
-                            <span className="text-gray-400 text-[10px] sm:text-xs font-medium px-2.5 sm:px-3 py-1.5 rounded bg-gray-600">
-                                No Stream
-                            </span>
-                        )}
+                        <span className={`text-white text-[10px] sm:text-xs font-bold px-2.5 sm:px-3 py-1.5 rounded transition-colors inline-flex items-center gap-1 ${isLive ? 'bg-red-600 group-hover:bg-red-700' : 'bg-green-600 group-hover:bg-green-700'}`}>
+                            {isLive ? 'Tonton ▶' : 'Tonton'}
+                        </span>
                     </div>
                 </div>
             </div>
@@ -591,22 +576,27 @@ function FootballMatchCard({ fixture, isLive }) {
 
 // ========== BASKETBALL MATCH CARD ==========
 function BasketballMatchCard({ match, isLive }) {
-    const { homeTeam, awayTeam, status, scores, stream, date, id } = match;
-    const hasStream = !!stream?.streamId;
+    const { homeTeam, awayTeam, league, score, stream, date, quarter, timer } = match;
 
-    const matchUrl = hasStream
-        ? `/basketball/${id}?stream=${stream.streamId}`
-        : `/basketball/${id}`;
+    // Link ke player page dengan stream ID
+    const matchUrl = `/basketball/${stream?.id}`;
+
+    // Format quarter display
+    const getQuarterDisplay = () => {
+        if (quarter && timer) return `${quarter} ${timer}'`;
+        if (quarter) return quarter;
+        return 'LIVE';
+    };
 
     return (
         <Link href={matchUrl}>
-            <div className={`bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors cursor-pointer group overflow-hidden relative ${!hasStream ? 'opacity-70' : ''}`}>
+            <div className="bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors cursor-pointer group overflow-hidden relative">
 
                 {/* Live Badge - Top Left */}
                 {isLive && (
                     <div className="absolute top-0 left-0 bg-red-600 text-white text-[10px] px-2 py-0.5 rounded-br font-bold flex items-center gap-1 z-10">
                         <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse"></span>
-                        {status?.short || 'LIVE'}
+                        {getQuarterDisplay()}
                     </div>
                 )}
 
@@ -617,7 +607,7 @@ function BasketballMatchCard({ match, isLive }) {
                     </span>
                     <span className="text-orange-400 truncate max-w-[120px] sm:max-w-[200px] flex items-center gap-1">
                         <MdSportsBasketball size={12} />
-                        NBA
+                        {league?.name || 'NBA'}
                     </span>
                 </div>
 
@@ -639,9 +629,9 @@ function BasketballMatchCard({ match, isLive }) {
 
                     {/* Score / VS */}
                     <div className="flex-shrink-0 px-2">
-                        {isLive ? (
+                        {isLive && score?.home !== null ? (
                             <span className="text-white text-sm sm:text-base font-bold">
-                                {scores?.home?.total ?? 0} - {scores?.away?.total ?? 0}
+                                {score?.home ?? 0} - {score?.away ?? 0}
                             </span>
                         ) : (
                             <span className="text-gray-400 text-xs sm:text-sm font-bold">VS</span>
@@ -663,119 +653,9 @@ function BasketballMatchCard({ match, isLive }) {
 
                     {/* Tombol Tonton */}
                     <div className="flex-shrink-0 ml-2">
-                        {hasStream ? (
-                            <span className={`text-white text-[10px] sm:text-xs font-bold px-2.5 sm:px-3 py-1.5 rounded transition-colors inline-flex items-center gap-1 ${isLive ? 'bg-red-600 group-hover:bg-red-700' : 'bg-orange-500 group-hover:bg-orange-600'}`}>
-                                {isLive ? 'Tonton ▶' : 'Tonton'}
-                            </span>
-                        ) : (
-                            <span className="text-gray-400 text-[10px] sm:text-xs font-medium px-2.5 sm:px-3 py-1.5 rounded bg-gray-600">
-                                No Stream
-                            </span>
-                        )}
-                    </div>
-                </div>
-            </div>
-        </Link>
-    );
-}
-
-// ========== TENNIS MATCH CARD ==========
-function TennisMatchCard({ match, isLive }) {
-    const { player1, player2, status, scores, stream, date, time, id, tournament } = match;
-    const hasStream = !!stream?.streamId;
-
-    const matchUrl = hasStream
-        ? `/tennis/${id}?stream=${stream.streamId}`
-        : `/tennis/${id}`;
-
-    // Format tennis score (sets) - api-tennis.com format
-    const formatTennisScore = () => {
-        if (!scores || scores.length === 0) return null;
-        return scores.map(s => `${s.player1}-${s.player2}`).join(' ');
-    };
-
-    const tennisScore = formatTennisScore();
-
-    // Format time for display
-    const formatTime = () => {
-        if (time) return `${time} WIB`;
-        if (date) {
-            const d = new Date(date);
-            const hours = d.getHours().toString().padStart(2, '0');
-            const minutes = d.getMinutes().toString().padStart(2, '0');
-            return `${hours}:${minutes} WIB`;
-        }
-        return '-';
-    };
-
-    return (
-        <Link href={matchUrl}>
-            <div className={`bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors cursor-pointer group overflow-hidden relative ${!hasStream ? 'opacity-70' : ''}`}>
-
-                {/* Live Badge - Top Left */}
-                {isLive && (
-                    <div className="absolute top-0 left-0 bg-red-600 text-white text-[10px] px-2 py-0.5 rounded-br font-bold flex items-center gap-1 z-10">
-                        <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse"></span>
-                        {status?.short || 'LIVE'}
-                    </div>
-                )}
-
-                {/* Header - Status & Tournament */}
-                <div className="flex justify-between items-center px-3 py-1.5 bg-gray-800 text-[10px] sm:text-xs">
-                    <span className={`font-medium ${isLive ? 'text-red-400' : 'text-gray-400'}`}>
-                        {isLive ? '🔴 Sedang Tayang' : `Upcoming - ${formatTime()}`}
-                    </span>
-                    <span className="text-yellow-400 truncate max-w-[120px] sm:max-w-[200px] flex items-center gap-1">
-                        <MdSportsTennis size={12} />
-                        {tournament?.name || 'Tennis'}
-                    </span>
-                </div>
-
-                {/* Match Content */}
-                <div className="flex items-center justify-between px-3 py-2.5 gap-2">
-
-                    {/* Player 1 */}
-                    <div className="flex items-center gap-2 flex-1 min-w-0 justify-end">
-                        <span className="text-white text-xs sm:text-sm font-medium truncate text-right">
-                            {player1?.name || 'Player 1'}
+                        <span className={`text-white text-[10px] sm:text-xs font-bold px-2.5 sm:px-3 py-1.5 rounded transition-colors inline-flex items-center gap-1 ${isLive ? 'bg-red-600 group-hover:bg-red-700' : 'bg-orange-500 group-hover:bg-orange-600'}`}>
+                            {isLive ? 'Tonton ▶' : 'Tonton'}
                         </span>
-                        <div className="w-6 h-6 sm:w-8 sm:h-8 bg-yellow-600 rounded-full flex items-center justify-center flex-shrink-0">
-                            <MdSportsTennis size={16} className="text-white" />
-                        </div>
-                    </div>
-
-                    {/* Score / VS */}
-                    <div className="flex-shrink-0 px-2">
-                        {isLive && tennisScore ? (
-                            <span className="text-white text-xs sm:text-sm font-bold">
-                                {tennisScore}
-                            </span>
-                        ) : (
-                            <span className="text-gray-400 text-xs sm:text-sm font-bold">VS</span>
-                        )}
-                    </div>
-
-                    {/* Player 2 */}
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                        <div className="w-6 h-6 sm:w-8 sm:h-8 bg-yellow-600 rounded-full flex items-center justify-center flex-shrink-0">
-                            <MdSportsTennis size={16} className="text-white" />
-                        </div>
-                        <span className="text-white text-xs sm:text-sm font-medium truncate">
-                            {player2?.name || 'Player 2'}
-                        </span>
-                    </div>
-
-                    {/* Tombol Tonton */}
-                    <div className="flex-shrink-0 ml-2">
-                        {hasStream ? (
-                            <span className={`text-white text-[10px] sm:text-xs font-bold px-2.5 sm:px-3 py-1.5 rounded transition-colors inline-flex items-center gap-1 ${isLive ? 'bg-red-600 group-hover:bg-red-700' : 'bg-orange-500 group-hover:bg-orange-600'}`}>
-                                {isLive ? 'Tonton ▶' : 'Tonton'}
-                            </span>
-                        ) : (
-                            <span className="text-gray-400 text-[10px] sm:text-xs font-medium px-2.5 sm:px-3 py-1.5 rounded bg-gray-600">
-                                No Stream
-                            </span>
-                        )}
                     </div>
                 </div>
             </div>

@@ -1,67 +1,52 @@
-// app/basketball/[id]/page.jsx
-// SERVER COMPONENT - untuk Dynamic SEO metadata
-
-import BasketballMatchPageClient from './BasketballMatchPageClient';
-
-const API_URL = 'https://sportmeriah-backend-production.up.railway.app';
+import BasketballPlayerClient from './BasketballPlayerClient';
 
 export async function generateMetadata({ params }) {
-    const matchId = params.id;
-    
+    const { id } = await params;
+
+    // Default metadata
+    let title = 'Live Streaming NBA Basketball | SportMeriah';
+    let description = 'Nonton live streaming NBA Basketball gratis di SportMeriah. Kualitas HD, tanpa buffering.';
+
     try {
-        const res = await fetch(`${API_URL}/api/basketball`, {
-            next: { revalidate: 60 }
-        });
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://sportmeriah-backend-production.up.railway.app';
+        const res = await fetch(`${API_URL}/api/basketball/stream/${id}`, { next: { revalidate: 60 } });
         const data = await res.json();
-        
-        if (data.success && data.matches) {
-            const match = data.matches.find(m => m.id === parseInt(matchId));
-            
-            if (match) {
-                const homeTeam = match.homeTeam?.name || 'Home';
-                const awayTeam = match.awayTeam?.name || 'Away';
-                const matchTitle = `${homeTeam} vs ${awayTeam}`;
-                
-                return {
-                    title: `Live Streaming ${matchTitle} - NBA Basketball`,
-                    description: `Nonton live streaming NBA ${matchTitle} gratis di SportMeriah. Basketball dengan kualitas HD tanpa buffering!`,
-                    openGraph: {
-                        title: `🏀 LIVE: ${matchTitle} - NBA`,
-                        description: `Nonton live streaming NBA ${matchTitle} gratis!`,
-                        url: `https://www.sportmeriah.com/basketball/${matchId}`,
-                        siteName: 'SportMeriah',
-                        images: [
-                            {
-                                url: match.homeTeam?.logo || '/og-image.png',
-                                width: 200,
-                                height: 200,
-                                alt: homeTeam,
-                            },
-                        ],
-                        locale: 'id_ID',
-                        type: 'website',
-                    },
-                    twitter: {
-                        card: 'summary',
-                        title: `🏀 LIVE: ${matchTitle} - NBA`,
-                        description: `Nonton live streaming NBA ${matchTitle} gratis!`,
-                    },
-                    alternates: {
-                        canonical: `https://www.sportmeriah.com/basketball/${matchId}`,
-                    },
-                };
-            }
+
+        if (data.success && data.stream) {
+            const streamName = data.stream.name || 'NBA Basketball';
+            title = `${streamName} - Live Streaming | SportMeriah`;
+            description = `Nonton ${streamName} live streaming gratis di SportMeriah. Kualitas HD, server stabil, tanpa buffering.`;
+        }
+
+        if (data.match) {
+            const homeName = data.match.homeTeam?.name || 'Home';
+            const awayName = data.match.awayTeam?.name || 'Away';
+            const leagueName = data.match.league?.name || 'NBA';
+            title = `${homeName} vs ${awayName} - ${leagueName} Live | SportMeriah`;
+            description = `Nonton ${homeName} vs ${awayName} (${leagueName}) live streaming gratis di SportMeriah. Kualitas HD, tanpa buffering.`;
         }
     } catch (error) {
-        console.error('Error generating metadata:', error);
+        console.error('Error fetching metadata:', error);
     }
-    
+
     return {
-        title: 'Live Streaming NBA Basketball',
-        description: 'Nonton live streaming NBA Basketball gratis di SportMeriah.',
+        title,
+        description,
+        openGraph: {
+            title,
+            description,
+            type: 'website',
+            siteName: 'SportMeriah',
+        },
+        twitter: {
+            card: 'summary_large_image',
+            title,
+            description,
+        },
     };
 }
 
-export default function BasketballMatchPage({ params, searchParams }) {
-    return <BasketballMatchPageClient params={params} searchParams={searchParams} />;
+export default async function BasketballPlayerPage({ params }) {
+    const { id } = await params;
+    return <BasketballPlayerClient streamId={id} />;
 }
