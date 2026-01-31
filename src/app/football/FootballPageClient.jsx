@@ -11,6 +11,29 @@ import { MdSportsSoccer, MdSportsBasketball } from 'react-icons/md';
 
 const API_URL = 'https://sportmeriah-backend-production.up.railway.app';
 
+// Priority leagues for sorting
+const PRIORITY_LEAGUES = [
+    'UEFA Champions League',
+    'UEFA Europa League',
+    'UEFA Europa Conference League',
+    'Premier League',
+    'La Liga',
+    'Serie A',
+    'Bundesliga',
+    'Ligue 1',
+    'Eredivisie',
+    'Primeira Liga',
+    'Super Lig',
+    'Saudi Pro League',
+    'MLS',
+    'Liga 1',
+    'FA Cup',
+    'EFL Cup',
+    'Copa del Rey',
+    'Coppa Italia',
+    'DFB Pokal',
+];
+
 // ========== FORMAT TIME ==========
 function formatKickoffTime(dateString) {
     if (!dateString) return '-';
@@ -20,16 +43,31 @@ function formatKickoffTime(dateString) {
     return `${hours}:${minutes} WIB`;
 }
 
+// Sort by league priority
+function sortByLeaguePriority(matches) {
+    return [...matches].sort((a, b) => {
+        const leagueA = a.league?.name || '';
+        const leagueB = b.league?.name || '';
+
+        const priorityA = PRIORITY_LEAGUES.findIndex(l => leagueA === l);
+        const priorityB = PRIORITY_LEAGUES.findIndex(l => leagueB === l);
+
+        if (priorityA !== -1 && priorityB !== -1) return priorityA - priorityB;
+        if (priorityA !== -1) return -1;
+        if (priorityB !== -1) return 1;
+        return new Date(a.date) - new Date(b.date);
+    });
+}
+
 export default function FootballPageClient() {
-    const [matches, setMatches] = useState({ live: [], upcoming: [], finished: [] });
+    const [liveMatches, setLiveMatches] = useState([]);
+    const [upcomingMatches, setUpcomingMatches] = useState([]);
     const [extraChannels, setExtraChannels] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [stats, setStats] = useState({ total: 0, live: 0, upcoming: 0, withStreams: 0 });
+    const [stats, setStats] = useState({ live: 0, upcoming: 0, extra: 0, total: 0 });
 
     useEffect(() => {
         fetchMatches();
-
-        // Refresh setiap 60 detik
         const interval = setInterval(fetchMatches, 60000);
         return () => clearInterval(interval);
     }, []);
@@ -40,17 +78,23 @@ export default function FootballPageClient() {
             const data = await res.json();
 
             if (data.success) {
-                setMatches({
-                    live: data.matches?.live || [],
-                    upcoming: data.matches?.upcoming || [],
-                    finished: data.matches?.finished || []
-                });
+                // ONLY matches with streams
+                const liveWithStream = (data.matches?.live || []).filter(m => m.hasStream || m.stream?.id);
+                const upcomingWithStream = (data.matches?.upcoming || []).filter(m => m.hasStream || m.stream?.id);
+
+                // Sort by league priority
+                const sortedLive = sortByLeaguePriority(liveWithStream);
+                const sortedUpcoming = sortByLeaguePriority(upcomingWithStream);
+
+                setLiveMatches(sortedLive);
+                setUpcomingMatches(sortedUpcoming);
                 setExtraChannels(data.extraChannels || []);
+
                 setStats({
-                    total: data.stats?.total || 0,
-                    live: data.stats?.live || 0,
-                    upcoming: data.stats?.upcoming || 0,
-                    withStreams: data.stats?.withStreams || 0
+                    live: sortedLive.length,
+                    upcoming: sortedUpcoming.length,
+                    extra: (data.extraChannels || []).length,
+                    total: sortedLive.length + sortedUpcoming.length + (data.extraChannels || []).length
                 });
             }
         } catch (error) {
@@ -92,20 +136,20 @@ export default function FootballPageClient() {
                             </h3>
                             <div className="space-y-3">
                                 <div className="flex justify-between text-sm">
-                                    <span className="text-gray-400">Total Matches</span>
-                                    <span className="text-white font-bold">{stats.total}</span>
-                                </div>
-                                <div className="flex justify-between text-sm">
-                                    <span className="text-gray-400">Live Now</span>
+                                    <span className="text-gray-400">🔴 Live Now</span>
                                     <span className="text-red-500 font-bold">{stats.live}</span>
                                 </div>
                                 <div className="flex justify-between text-sm">
-                                    <span className="text-gray-400">Upcoming</span>
+                                    <span className="text-gray-400">📅 Upcoming</span>
                                     <span className="text-orange-500 font-bold">{stats.upcoming}</span>
                                 </div>
                                 <div className="flex justify-between text-sm">
-                                    <span className="text-gray-400">With Stream</span>
-                                    <span className="text-green-500 font-bold">{stats.withStreams}</span>
+                                    <span className="text-gray-400">📺 Extra Channels</span>
+                                    <span className="text-blue-500 font-bold">{stats.extra}</span>
+                                </div>
+                                <div className="flex justify-between text-sm border-t border-gray-700 pt-3">
+                                    <span className="text-gray-400">Total Streams</span>
+                                    <span className="text-green-500 font-bold">{stats.total}</span>
                                 </div>
                             </div>
 
@@ -155,7 +199,7 @@ export default function FootballPageClient() {
                                         width: 48px;
                                         height: 48px;
                                         border-radius: 50%;
-                                        border-left: 4px solid #FF3D00;
+                                        border-left: 4px solid #22c55e;
                                         border-bottom: 4px solid transparent;
                                         animation: rotation 0.5s linear infinite reverse;
                                     }
@@ -167,17 +211,20 @@ export default function FootballPageClient() {
                             </div>
                         ) : (
                             <>
-                                {/* LIVE Section */}
-                                {matches.live.length > 0 && (
-                                    <div>
-                                        <h2 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
-                                            <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
-                                            LIVE NOW
+                                {/* LIVE MATCHES */}
+                                {liveMatches.length > 0 && (
+                                    <div className="bg-gray-800 rounded-lg p-4">
+                                        <h2 className="text-white font-semibold mb-4 flex items-center gap-2">
+                                            <span className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></span>
+                                            Sedang Tayang
+                                            <span className="text-xs text-gray-400 font-normal">
+                                                ({liveMatches.length} pertandingan)
+                                            </span>
                                         </h2>
                                         <div className="space-y-3">
-                                            {matches.live.map((match) => (
+                                            {liveMatches.map((match, index) => (
                                                 <MatchCard
-                                                    key={match.id}
+                                                    key={`live-${match.id || index}`}
                                                     match={match}
                                                     isLive={true}
                                                 />
@@ -186,16 +233,20 @@ export default function FootballPageClient() {
                                     </div>
                                 )}
 
-                                {/* Upcoming Section */}
-                                {matches.upcoming.length > 0 && (
-                                    <div>
-                                        <h2 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
-                                            ⏰ Upcoming
+                                {/* UPCOMING MATCHES */}
+                                {upcomingMatches.length > 0 && (
+                                    <div className="bg-gray-800 rounded-lg p-4">
+                                        <h2 className="text-white font-semibold mb-4 flex items-center gap-2">
+                                            <MdSportsSoccer className="text-green-500" />
+                                            Akan Datang
+                                            <span className="text-xs text-gray-400 font-normal">
+                                                ({upcomingMatches.length} pertandingan)
+                                            </span>
                                         </h2>
                                         <div className="space-y-3">
-                                            {matches.upcoming.map((match) => (
+                                            {upcomingMatches.map((match, index) => (
                                                 <MatchCard
-                                                    key={match.id}
+                                                    key={`upcoming-${match.id || index}`}
                                                     match={match}
                                                     isLive={false}
                                                 />
@@ -204,16 +255,22 @@ export default function FootballPageClient() {
                                     </div>
                                 )}
 
-                                {/* Extra Channels Section */}
+                                {/* EXTRA CHANNELS */}
                                 {extraChannels.length > 0 && (
-                                    <div>
-                                        <h2 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+                                    <div className="bg-gray-800 rounded-lg p-4">
+                                        <h2 className="text-white font-semibold mb-4 flex items-center gap-2">
                                             📺 Extra Channels
+                                            <span className="text-xs text-gray-400 font-normal">
+                                                ({extraChannels.length} channel)
+                                            </span>
                                         </h2>
+                                        <p className="text-gray-400 text-xs mb-4">
+                                            Channel yang belum ter-match dengan jadwal pertandingan
+                                        </p>
                                         <div className="space-y-3">
-                                            {extraChannels.map((channel) => (
+                                            {extraChannels.map((channel, index) => (
                                                 <ChannelCard
-                                                    key={channel.id}
+                                                    key={`channel-${channel.id || index}`}
                                                     channel={channel}
                                                 />
                                             ))}
@@ -221,31 +278,12 @@ export default function FootballPageClient() {
                                     </div>
                                 )}
 
-                                {/* Finished Section */}
-                                {matches.finished.length > 0 && (
-                                    <div>
-                                        <h2 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
-                                            ✅ Selesai
-                                        </h2>
-                                        <div className="space-y-3">
-                                            {matches.finished.map((match) => (
-                                                <MatchCard
-                                                    key={match.id}
-                                                    match={match}
-                                                    isLive={false}
-                                                    isFinished={true}
-                                                />
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-
                                 {/* Empty State */}
-                                {matches.live.length === 0 && matches.upcoming.length === 0 && matches.finished.length === 0 && (
+                                {liveMatches.length === 0 && upcomingMatches.length === 0 && extraChannels.length === 0 && (
                                     <div className="bg-gray-800 rounded-lg p-8 text-center">
-                                        <p className="text-4xl mb-4">⚽</p>
-                                        <p className="text-gray-400">Tidak ada pertandingan tersedia saat ini</p>
-                                        <Link href="/" className="text-green-500 hover:underline mt-4 inline-block">
+                                        <p className="text-4xl mb-4">😴</p>
+                                        <p className="text-gray-400">Tidak ada stream tersedia saat ini</p>
+                                        <Link href="/" className="inline-block mt-4 text-green-400 hover:text-green-300">
                                             ← Kembali ke Beranda
                                         </Link>
                                     </div>
@@ -253,17 +291,13 @@ export default function FootballPageClient() {
                             </>
                         )}
 
-                        {/* SEO Description */}
+                        {/* SEO */}
                         <div className="mt-8 pt-6 border-t border-gray-700 text-gray-400 text-sm space-y-3">
-                            <h2 className="text-xl font-semibold text-white">
-                                Nonton Streaming Sepakbola Gratis
+                            <h2 className="text-lg font-semibold text-white">
+                                Live Streaming Sepakbola Gratis
                             </h2>
                             <p>
-                                Nonton streaming sepakbola gratis di SportMeriah. Liga Champions, Europa League,
-                                Conference League, Premier League, La Liga, Serie A, Bundesliga, dan liga top lainnya.
-                            </p>
-                            <p>
-                                Kualitas terbaik, server tercepat, dan update skor real-time. Tonton sekarang!
+                                Nonton streaming sepakbola gratis di SportMeriah. Tersedia pertandingan dari liga-liga top dunia seperti Premier League, La Liga, Serie A, Bundesliga, Ligue 1, dan banyak lagi.
                             </p>
                         </div>
                     </div>
@@ -299,16 +333,15 @@ export default function FootballPageClient() {
 }
 
 // ========== MATCH CARD COMPONENT ==========
-function MatchCard({ match, isLive, isFinished = false }) {
+function MatchCard({ match, isLive }) {
     const { homeTeam, awayTeam, league, score, stream, date, elapsed } = match;
-    const hasStream = !!stream?.id;
 
-    // Link ke player page dengan stream ID
-    const matchUrl = hasStream ? `/football/${stream.id}` : '#';
+    // Semua match disini pasti punya stream
+    const matchUrl = `/football/${stream?.id}`;
 
     return (
         <Link href={matchUrl}>
-            <div className={`bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors cursor-pointer group overflow-hidden relative ${!hasStream ? 'opacity-70' : ''} ${isFinished ? 'opacity-60' : ''}`}>
+            <div className="bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors cursor-pointer group overflow-hidden relative">
 
                 {/* Live Badge */}
                 {isLive && (
@@ -320,8 +353,8 @@ function MatchCard({ match, isLive, isFinished = false }) {
 
                 {/* Header */}
                 <div className="flex justify-between items-center px-3 py-1.5 bg-gray-800 text-[10px] sm:text-xs">
-                    <span className={`font-medium ${isLive ? 'text-red-400' : isFinished ? 'text-gray-500' : 'text-gray-400'}`}>
-                        {isLive ? '🔴 Sedang Tayang' : isFinished ? 'Selesai' : `Upcoming - ${formatKickoffTime(date)}`}
+                    <span className={`font-medium ${isLive ? 'text-red-400' : 'text-gray-400'}`}>
+                        {isLive ? '🔴 Sedang Tayang' : `Upcoming - ${formatKickoffTime(date)}`}
                     </span>
                     <span className="text-green-400 truncate max-w-[120px] sm:max-w-[200px] flex items-center gap-1">
                         <MdSportsSoccer size={12} />
@@ -347,7 +380,7 @@ function MatchCard({ match, isLive, isFinished = false }) {
 
                     {/* Score / VS */}
                     <div className="flex-shrink-0 px-2">
-                        {(isLive || isFinished) && score?.home !== null ? (
+                        {isLive && score?.home !== null ? (
                             <span className="text-white text-sm sm:text-base font-bold">
                                 {score?.home ?? 0} - {score?.away ?? 0}
                             </span>
@@ -371,15 +404,9 @@ function MatchCard({ match, isLive, isFinished = false }) {
 
                     {/* Button */}
                     <div className="flex-shrink-0 ml-2">
-                        {hasStream ? (
-                            <span className={`text-white text-[10px] sm:text-xs font-bold px-2.5 sm:px-3 py-1.5 rounded transition-colors inline-flex items-center gap-1 ${isLive ? 'bg-red-600 group-hover:bg-red-700' : isFinished ? 'bg-gray-500' : 'bg-green-600 group-hover:bg-green-700'}`}>
-                                {isLive ? 'Tonton ▶' : isFinished ? 'Selesai' : 'Tonton'}
-                            </span>
-                        ) : (
-                            <span className="text-gray-400 text-[10px] sm:text-xs font-medium px-2.5 sm:px-3 py-1.5 rounded bg-gray-600">
-                                No Stream
-                            </span>
-                        )}
+                        <span className={`text-white text-[10px] sm:text-xs font-bold px-2.5 sm:px-3 py-1.5 rounded transition-colors inline-flex items-center gap-1 ${isLive ? 'bg-red-600 group-hover:bg-red-700' : 'bg-green-600 group-hover:bg-green-700'}`}>
+                            {isLive ? 'Tonton ▶' : 'Tonton'}
+                        </span>
                     </div>
                 </div>
             </div>
@@ -389,7 +416,14 @@ function MatchCard({ match, isLive, isFinished = false }) {
 
 // ========== CHANNEL CARD COMPONENT ==========
 function ChannelCard({ channel }) {
-    const { id, name, category } = channel;
+    const { id, name, category, parsedMatch } = channel;
+
+    // Parse team names from channel name for display
+    const displayName = parsedMatch?.homeTeam && parsedMatch?.awayTeam
+        ? `${capitalize(parsedMatch.homeTeam)} vs ${capitalize(parsedMatch.awayTeam)}`
+        : name;
+
+    const leagueName = parsedMatch?.league || category || 'Football';
 
     return (
         <Link href={`/football/${id}`}>
@@ -400,7 +434,7 @@ function ChannelCard({ channel }) {
                     <span className="font-medium text-blue-400">📺 Extra Channel</span>
                     <span className="text-green-400 truncate max-w-[120px] sm:max-w-[200px] flex items-center gap-1">
                         <MdSportsSoccer size={12} />
-                        {category || 'Football'}
+                        {leagueName}
                     </span>
                 </div>
 
@@ -411,7 +445,7 @@ function ChannelCard({ channel }) {
                             <MdSportsSoccer size={18} className="text-white" />
                         </div>
                         <span className="text-white text-xs sm:text-sm font-medium truncate">
-                            {name || 'Unknown Channel'}
+                            {displayName}
                         </span>
                     </div>
 
@@ -425,4 +459,10 @@ function ChannelCard({ channel }) {
             </div>
         </Link>
     );
+}
+
+// Helper: Capitalize words
+function capitalize(str) {
+    if (!str) return '';
+    return str.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 }
