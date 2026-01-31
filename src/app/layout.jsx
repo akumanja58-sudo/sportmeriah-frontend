@@ -80,21 +80,21 @@ export const metadata = {
         },
     },
     icons: {
-        icon: '/favicon.ico',
-        shortcut: '/favicon.ico',
-        apple: '/apple-touch-icon.png',
+        icon: '/sportmeriah-icon.ico',
+        shortcut: '/sportmeriah-icon.ico',
+        apple: '/sportmeriah-icon.ico',
         other: [
             {
                 rel: 'icon',
                 type: 'image/png',
                 sizes: '32x32',
-                url: '/favicon-32x32.png',
+                url: '/sportmeriah-icon.ico',
             },
             {
                 rel: 'icon',
                 type: 'image/png',
                 sizes: '16x16',
-                url: '/favicon-16x16.png',
+                url: '/sportmeriah-icon.ico',
             },
         ],
     },
@@ -164,8 +164,8 @@ export default function RootLayout({ children }) {
     return (
         <html lang="id">
             <head>
-                <link rel="icon" href="/favicon.ico" sizes="any" />
-                <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+                <link rel="icon" href="/sportmeriah-icon.ico" sizes="any" />
+                <link rel="apple-touch-icon" href="/sportmeriah-icon.ico" />
                 <link rel="preconnect" href="https://sportmeriah-backend-production.up.railway.app" />
                 <link rel="dns-prefetch" href="https://sportmeriah-backend-production.up.railway.app" />
                 <link rel="preconnect" href="https://media.api-sports.io" />
