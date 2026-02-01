@@ -11,6 +11,13 @@ import { MdSportsSoccer, MdSportsBasketball } from 'react-icons/md';
 
 const API_URL = 'https://sportmeriah-backend-production.up.railway.app';
 
+const BANNERS = [
+    { id: 1, src: 'https://inigambarku.site/images/2026/01/20/GIFMERIAH4D965a1f7cfb6a4aac.gif', link: '#' },
+    { id: 2, src: 'https://inigambarku.site/images/2026/02/01/promo-penaslot.gif', link: '#' },
+    { id: 3, src: 'https://inigambarku.site/images/2026/01/20/promo-pesiarbet.gif', link: '#' },
+    { id: 4, src: 'https://inigambarku.site/images/2026/01/20/promo-girang4d.gif', link: '#' },
+];
+
 // ========== FORMAT TIME ==========
 function formatKickoffTime(dateString) {
     if (!dateString) return '-';
@@ -65,6 +72,16 @@ export default function BasketballPageClient() {
             <Navbar />
 
             <div className="container max-w-6xl mx-auto px-4 py-6">
+
+                <div className="mb-4 space-y-2">
+                    {BANNERS.map((banner) => (
+                        <div key={banner.id} className="banner-slot">
+                            <a href={banner.link} target="_blank" rel="noopener">
+                                <img src={banner.src} alt={`Banner ${banner.id}`} className="w-full rounded-lg hover:opacity-90 transition-opacity" onError={(e) => e.target.parentElement.parentElement.style.display = 'none'} />
+                            </a>
+                        </div>
+                    ))}
+                </div>
 
                 {/* Header */}
                 <div className="flex items-center justify-between mb-6">
