@@ -179,7 +179,8 @@ export default function FootballPlayerClient({ streamId }) {
       hls.loadSource(streamUrl);
       hls.attachMedia(videoRef.current);
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        videoRef.current.play().then(() => setIsPlaying(true)).catch(() => { });
+        setIsPlaying(true); // Show video immediately
+        videoRef.current.play().catch(() => { }); // Autoplay might fail, that's ok
       });
       hls.on(Hls.Events.ERROR, (event, data) => {
         if (data.fatal) {
@@ -192,7 +193,8 @@ export default function FootballPlayerClient({ streamId }) {
     } else if (videoRef.current.canPlayType('application/vnd.apple.mpegurl')) {
       videoRef.current.src = streamUrl;
       videoRef.current.addEventListener('loadedmetadata', () => {
-        videoRef.current.play().then(() => setIsPlaying(true)).catch(() => { });
+        setIsPlaying(true); // Show video immediately
+        videoRef.current.play().catch(() => { }); // Autoplay might fail, that's ok
       });
     }
   }, [streamId]);
