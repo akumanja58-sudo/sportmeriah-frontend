@@ -5,11 +5,18 @@ import Navbar from '../components/Navbar';
 import Link from 'next/link';
 
 // React Icons
-import { FaTv } from 'react-icons/fa';
+import { FaTelegram } from 'react-icons/fa';
 import { IoHome } from 'react-icons/io5';
-import { MdSportsSoccer, MdSportsBasketball, MdLiveTv } from 'react-icons/md';
+import { MdSportsSoccer, MdSportsBasketball } from 'react-icons/md';
 
 const API_URL = 'https://sportmeriah-backend-production.up.railway.app';
+
+const BANNERS = [
+    { id: 1, src: 'https://inigambarku.site/images/2026/01/20/GIFMERIAH4D965a1f7cfb6a4aac.gif', link: '#' },
+    { id: 2, src: 'https://inigambarku.site/images/2026/02/01/promo-penaslot.gif', link: '#' },
+    { id: 3, src: 'https://inigambarku.site/images/2026/01/20/promo-pesiarbet.gif', link: '#' },
+    { id: 4, src: 'https://inigambarku.site/images/2026/01/20/promo-girang4d.gif', link: '#' },
+];
 
 // ========== FORMAT TIME ==========
 function formatKickoffTime(dateString) {
@@ -23,12 +30,13 @@ function formatKickoffTime(dateString) {
 export default function BasketballPageClient() {
     const [matches, setMatches] = useState({ live: [], upcoming: [], finished: [] });
     const [extraChannels, setExtraChannels] = useState([]);
-    const [sportsTVChannels, setSportsTVChannels] = useState([]);
     const [loading, setLoading] = useState(true);
     const [stats, setStats] = useState({ total: 0, live: 0, upcoming: 0, withStreams: 0 });
 
     useEffect(() => {
         fetchMatches();
+
+        // Refresh setiap 60 detik
         const interval = setInterval(fetchMatches, 60000);
         return () => clearInterval(interval);
     }, []);
@@ -45,7 +53,6 @@ export default function BasketballPageClient() {
                     finished: data.matches?.finished || []
                 });
                 setExtraChannels(data.extraChannels || []);
-                setSportsTVChannels(data.sportsTVChannels || []);
                 setStats({
                     total: data.stats?.total || 0,
                     live: data.stats?.live || 0,
@@ -65,6 +72,16 @@ export default function BasketballPageClient() {
             <Navbar />
 
             <div className="container max-w-6xl mx-auto px-4 py-6">
+
+                <div className="mb-4 space-y-2">
+                    {BANNERS.map((banner) => (
+                        <div key={banner.id} className="banner-slot">
+                            <a href={banner.link} target="_blank" rel="noopener">
+                                <img src={banner.src} alt={`Banner ${banner.id}`} className="w-full rounded-lg hover:opacity-90 transition-opacity" onError={(e) => e.target.parentElement.parentElement.style.display = 'none'} />
+                            </a>
+                        </div>
+                    ))}
+                </div>
 
                 {/* Header */}
                 <div className="flex items-center justify-between mb-6">
@@ -88,11 +105,11 @@ export default function BasketballPageClient() {
                         <div className="bg-gray-800 rounded-lg p-4 sticky top-32">
                             <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
                                 <MdSportsBasketball className="text-orange-500" />
-                                NBA Stats
+                                Basketball Stats
                             </h3>
                             <div className="space-y-3">
                                 <div className="flex justify-between text-sm">
-                                    <span className="text-gray-400">Total Games</span>
+                                    <span className="text-gray-400">Total Matches</span>
                                     <span className="text-white font-bold">{stats.total}</span>
                                 </div>
                                 <div className="flex justify-between text-sm">
@@ -107,10 +124,6 @@ export default function BasketballPageClient() {
                                     <span className="text-gray-400">With Stream</span>
                                     <span className="text-green-500 font-bold">{stats.withStreams}</span>
                                 </div>
-                                <div className="flex justify-between text-sm">
-                                    <span className="text-gray-400">Sports TV</span>
-                                    <span className="text-blue-500 font-bold">{sportsTVChannels.length}</span>
-                                </div>
                             </div>
 
                             {/* Quick Links */}
@@ -122,7 +135,7 @@ export default function BasketballPageClient() {
                                     </Link>
                                     <Link href="/football" className="block text-gray-400 hover:text-green-400 text-sm flex items-center gap-2">
                                         <MdSportsSoccer size={16} />
-                                        Lihat Football
+                                        Lihat Sepakbola
                                     </Link>
                                 </div>
                             </div>
@@ -171,27 +184,6 @@ export default function BasketballPageClient() {
                             </div>
                         ) : (
                             <>
-                                {/* SPORTS TV Section */}
-                                {sportsTVChannels.length > 0 && (
-                                    <div>
-                                        <h2 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
-                                            <MdLiveTv className="text-blue-500" />
-                                            Live Sports TV
-                                            <span className="text-xs bg-blue-600 text-white px-2 py-0.5 rounded-full ml-2">
-                                                {sportsTVChannels.length} Channels
-                                            </span>
-                                        </h2>
-                                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                                            {sportsTVChannels.map((channel) => (
-                                                <SportsTVCard
-                                                    key={channel.id}
-                                                    channel={channel}
-                                                />
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-
                                 {/* LIVE Section */}
                                 {matches.live.length > 0 && (
                                     <div>
@@ -266,7 +258,7 @@ export default function BasketballPageClient() {
                                 )}
 
                                 {/* Empty State */}
-                                {matches.live.length === 0 && matches.upcoming.length === 0 && matches.finished.length === 0 && sportsTVChannels.length === 0 && (
+                                {matches.live.length === 0 && matches.upcoming.length === 0 && matches.finished.length === 0 && (
                                     <div className="bg-gray-800 rounded-lg p-8 text-center">
                                         <p className="text-4xl mb-4">🏀</p>
                                         <p className="text-gray-400">Tidak ada pertandingan tersedia saat ini</p>
@@ -277,100 +269,92 @@ export default function BasketballPageClient() {
                                 )}
                             </>
                         )}
+
+                        {/* SEO Description */}
+                        <div className="mt-8 pt-6 border-t border-gray-700 text-gray-400 text-sm space-y-3">
+                            <h2 className="text-xl font-semibold text-white">
+                                Nonton Streaming NBA Basketball Gratis
+                            </h2>
+                            <p>
+                                Nonton streaming NBA Basketball gratis di SportMeriah. Los Angeles Lakers, Golden State Warriors,
+                                Boston Celtics, dan tim NBA lainnya. Kualitas HD tanpa buffering.
+                            </p>
+                            <p>
+                                Live streaming basketball dengan kualitas terbaik dan server tercepat. Tonton sekarang!
+                            </p>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            {/* Bottom Navigation - Mobile Only */}
-            <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-gray-800 border-t border-gray-700 px-4 py-2 z-50">
-                <div className="flex justify-around items-center">
-                    <Link href="/" className="flex flex-col items-center text-gray-400 hover:text-white">
-                        <IoHome size={20} />
-                        <span className="text-[10px] mt-1">Home</span>
+            {/* Bottom Nav Mobile */}
+            <nav className="fixed bottom-0 left-0 right-0 bg-gray-900 border-t border-gray-700 z-50 md:hidden">
+                <div className="flex justify-around items-center py-2 px-1">
+                    <Link href="/" className="flex flex-col items-center px-2 sm:px-4 py-2 text-gray-400 hover:text-white transition-colors">
+                        <IoHome size={22} />
+                        <span className="text-[10px] sm:text-xs mt-1">Beranda</span>
                     </Link>
-                    <Link href="/football" className="flex flex-col items-center text-gray-400 hover:text-green-400">
-                        <MdSportsSoccer size={20} />
-                        <span className="text-[10px] mt-1">Football</span>
+                    <Link href="/football" className="flex flex-col items-center px-2 sm:px-4 py-2 text-gray-400 hover:text-green-400 transition-colors">
+                        <MdSportsSoccer size={22} />
+                        <span className="text-[10px] sm:text-xs mt-1">Sepakbola</span>
                     </Link>
-                    <Link href="/basketball" className="flex flex-col items-center text-orange-500">
-                        <MdSportsBasketball size={20} />
-                        <span className="text-[10px] mt-1">Basketball</span>
+                    <Link href="/basketball" className="flex flex-col items-center px-2 sm:px-4 py-2 text-orange-400">
+                        <MdSportsBasketball size={22} />
+                        <span className="text-[10px] sm:text-xs mt-1">NBA</span>
                     </Link>
+                    <a href="https://t.me/sportmeriah" target="_blank" className="flex flex-col items-center px-2 sm:px-4 py-2 text-gray-400 hover:text-blue-400 transition-colors">
+                        <FaTelegram size={22} />
+                        <span className="text-[10px] sm:text-xs mt-1">Telegram</span>
+                    </a>
                 </div>
-            </div>
+            </nav>
+
+            {/* Bottom padding for mobile nav */}
+            <div className="h-20 md:hidden"></div>
         </main>
     );
 }
 
-// ========== SPORTS TV CARD COMPONENT ==========
-function SportsTVCard({ channel }) {
-    const { id, name, league } = channel;
+// ========== MATCH CARD COMPONENT ==========
+function MatchCard({ match, isLive, isFinished = false }) {
+    const { homeTeam, awayTeam, league, score, stream, date, quarter, timer } = match;
+    const hasStream = !!stream?.id;
 
-    const getChannelIcon = () => {
-        const lowerName = name.toLowerCase();
-        if (lowerName.includes('nba tv')) return '🏀';
-        if (lowerName.includes('espn')) return '🔴';
-        if (lowerName.includes('tnt')) return '🟡';
-        if (lowerName.includes('spectrum') || lowerName.includes('lakers')) return '🟣';
-        if (lowerName.includes('msg') || lowerName.includes('knicks')) return '🔵';
-        if (lowerName.includes('yes') || lowerName.includes('nets')) return '⚫';
-        if (lowerName.includes('bally')) return '🟠';
-        if (lowerName.includes('nbc')) return '🔵';
-        return '📺';
+    // Link ke player page dengan stream ID
+    const matchUrl = hasStream ? `/basketball/${stream.id}` : '#';
+
+    // Format quarter display
+    const getQuarterDisplay = () => {
+        if (quarter && timer) return `${quarter} ${timer}'`;
+        if (quarter) return quarter;
+        return 'LIVE';
     };
 
     return (
-        <Link href={`/basketball/${id}`}>
-            <div className="bg-gradient-to-br from-gray-800 to-gray-700 rounded-lg hover:from-orange-900 hover:to-orange-800 transition-all cursor-pointer group overflow-hidden border border-gray-600 hover:border-orange-500">
-                <div className="p-3 text-center">
-                    {/* Icon */}
-                    <div className="text-2xl mb-2">{getChannelIcon()}</div>
+        <Link href={matchUrl}>
+            <div className={`bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors cursor-pointer group overflow-hidden relative ${!hasStream ? 'opacity-70' : ''} ${isFinished ? 'opacity-60' : ''}`}>
 
-                    {/* Channel Name */}
-                    <h3 className="text-white text-xs sm:text-sm font-bold truncate mb-1">
-                        {name}
-                    </h3>
-
-                    {/* League */}
-                    <p className="text-gray-400 text-[10px] truncate">
-                        {league}
-                    </p>
-
-                    {/* Watch Button */}
-                    <div className="mt-2">
-                        <span className="text-[10px] bg-orange-600 group-hover:bg-orange-500 text-white px-2 py-1 rounded-full transition-colors">
-                            LIVE
-                        </span>
+                {/* Live Badge */}
+                {isLive && (
+                    <div className="absolute top-0 left-0 bg-red-600 text-white text-[10px] px-2 py-0.5 rounded-br font-bold flex items-center gap-1 z-10">
+                        <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse"></span>
+                        {getQuarterDisplay()}
                     </div>
-                </div>
-            </div>
-        </Link>
-    );
-}
-
-// ========== MATCH CARD COMPONENT ==========
-function MatchCard({ match, isLive = false, isFinished = false }) {
-    const { id, homeTeam, awayTeam, league, date, score, hasStream, stream, quarter } = match;
-
-    return (
-        <Link href={hasStream ? `/basketball/${stream?.id}` : '#'} className={!hasStream ? 'pointer-events-none' : ''}>
-            <div className={`bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors cursor-pointer group overflow-hidden ${isLive ? 'ring-1 ring-red-500' : ''}`}>
+                )}
 
                 {/* Header */}
                 <div className="flex justify-between items-center px-3 py-1.5 bg-gray-800 text-[10px] sm:text-xs">
-                    <span className="font-medium text-orange-400 truncate max-w-[150px] sm:max-w-none flex items-center gap-1">
-                        {league?.logo && (
-                            <img src={league.logo} alt={league.name} className="w-4 h-4 object-contain" />
-                        )}
-                        {league?.name || 'NBA'}
+                    <span className={`font-medium ${isLive ? 'text-red-400' : isFinished ? 'text-gray-500' : 'text-gray-400'}`}>
+                        {isLive ? '🔴 Sedang Tayang' : isFinished ? 'Selesai' : `Upcoming - ${formatKickoffTime(date)}`}
                     </span>
-                    <span className={`${isLive ? 'text-red-400 animate-pulse font-bold' : 'text-gray-400'}`}>
-                        {isLive ? `🔴 LIVE ${quarter ? quarter : ''}` : isFinished ? 'FT' : formatKickoffTime(date)}
+                    <span className="text-orange-400 truncate max-w-[120px] sm:max-w-[200px] flex items-center gap-1">
+                        <MdSportsBasketball size={12} />
+                        {league?.name || 'NBA'}
                     </span>
                 </div>
 
-                {/* Content */}
-                <div className="flex items-center justify-between px-3 py-3 gap-2">
+                {/* Match Content */}
+                <div className="flex items-center justify-between px-3 py-2.5 gap-2">
 
                     {/* Home Team */}
                     <div className="flex items-center gap-2 flex-1 min-w-0 justify-end">
@@ -385,8 +369,8 @@ function MatchCard({ match, isLive = false, isFinished = false }) {
                         />
                     </div>
 
-                    {/* Score or VS */}
-                    <div className="flex-shrink-0 px-2 sm:px-3 text-center min-w-[50px]">
+                    {/* Score / VS */}
+                    <div className="flex-shrink-0 px-2">
                         {(isLive || isFinished) && score?.home !== null ? (
                             <span className="text-white text-sm sm:text-base font-bold">
                                 {score?.home ?? 0} - {score?.away ?? 0}
@@ -440,7 +424,7 @@ function ChannelCard({ channel }) {
                     <span className="font-medium text-blue-400">📺 Extra Channel</span>
                     <span className="text-orange-400 truncate max-w-[120px] sm:max-w-[200px] flex items-center gap-1">
                         <MdSportsBasketball size={12} />
-                        {category || 'NBA'}
+                        {category || 'Basketball'}
                     </span>
                 </div>
 
