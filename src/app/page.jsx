@@ -32,18 +32,18 @@ const PRIORITY_LEAGUES_FOOTBALL = [
     'UEFA Europa Conference League',
     'UEFA Super Cup',
     // Top 5 Leagues
-    'Premier League',           // England (exact match, bukan "Sudani Premier League")
-    'La Liga',                  // Spain
-    'Serie A',                  // Italy
-    'Bundesliga',               // Germany
-    'Ligue 1',                  // France
+    'Premier League',
+    'La Liga',
+    'Serie A',
+    'Bundesliga',
+    'Ligue 1',
     // Other Major Leagues
-    'Eredivisie',               // Netherlands
-    'Primeira Liga',            // Portugal
-    'Super Lig',                // Turkey
-    'Saudi Pro League',         // Saudi
-    'MLS',                      // USA
-    'Liga 1',                   // Indonesia
+    'Eredivisie',
+    'Primeira Liga',
+    'Super Lig',
+    'Saudi Pro League',
+    'MLS',
+    'Liga 1',
     // Cups
     'FA Cup',
     'EFL Cup',
@@ -78,17 +78,12 @@ function sortByLeaguePriority(matches, priorityList) {
         const leagueA = a.league?.name || '';
         const leagueB = b.league?.name || '';
 
-        // EXACT MATCH - bukan includes()
         const priorityA = priorityList.findIndex(l => leagueA === l);
         const priorityB = priorityList.findIndex(l => leagueB === l);
 
-        // Jika keduanya ada di priority list, sort by priority
         if (priorityA !== -1 && priorityB !== -1) return priorityA - priorityB;
-        // Jika hanya A yang ada di priority, A duluan
         if (priorityA !== -1) return -1;
-        // Jika hanya B yang ada di priority, B duluan
         if (priorityB !== -1) return 1;
-        // Jika keduanya tidak ada, sort by date
         return new Date(a.date) - new Date(b.date);
     });
 }
@@ -166,11 +161,9 @@ export default function Home() {
             if (footballRes.ok) {
                 const data = await footballRes.json();
                 if (data.success && data.matches) {
-                    // Filter hanya yang ada stream
                     const liveWithStream = (data.matches.live || []).filter(m => m.hasStream || m.stream?.id);
                     const upcomingWithStream = (data.matches.upcoming || []).filter(m => m.hasStream || m.stream?.id);
 
-                    // Sort by league priority
                     setFootballData({
                         live: sortByLeaguePriority(liveWithStream, PRIORITY_LEAGUES_FOOTBALL),
                         upcoming: sortByLeaguePriority(upcomingWithStream, PRIORITY_LEAGUES_FOOTBALL)
@@ -182,11 +175,9 @@ export default function Home() {
             if (basketballRes.ok) {
                 const data = await basketballRes.json();
                 if (data.success && data.matches) {
-                    // Filter hanya yang ada stream
                     const liveWithStream = (data.matches.live || []).filter(m => m.hasStream || m.stream?.id);
                     const upcomingWithStream = (data.matches.upcoming || []).filter(m => m.hasStream || m.stream?.id);
 
-                    // Sort by league priority
                     setBasketballData({
                         live: sortByLeaguePriority(liveWithStream, PRIORITY_LEAGUES_BASKETBALL),
                         upcoming: sortByLeaguePriority(upcomingWithStream, PRIORITY_LEAGUES_BASKETBALL)
@@ -495,10 +486,14 @@ export default function Home() {
 
 // ========== FOOTBALL MATCH CARD ==========
 function FootballMatchCard({ match, isLive }) {
-    const { homeTeam, awayTeam, league, score, stream, date, elapsed } = match;
+    const { homeTeam, awayTeam, league, score, stream, date, elapsed, id: fixtureId } = match;
 
-    // Link ke player page dengan stream ID
-    const matchUrl = `/football/${stream?.id}`;
+    // Link ke match page - pake fixture ID jika ada, fallback ke stream ID
+    const streamId = stream?.id;
+    const provider = stream?.provider || 'sphere';
+    const matchUrl = fixtureId
+        ? `/match/${fixtureId}?stream=${streamId}&provider=${provider}`
+        : `/football/${streamId}`;
 
     return (
         <Link href={matchUrl}>
