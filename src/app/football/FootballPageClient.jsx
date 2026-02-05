@@ -358,10 +358,14 @@ export default function FootballPageClient() {
 
 // ========== MATCH CARD COMPONENT ==========
 function MatchCard({ match, isLive }) {
-    const { homeTeam, awayTeam, league, score, stream, date, elapsed } = match;
+    const { homeTeam, awayTeam, league, score, stream, date, elapsed, id: fixtureId } = match;
 
-    // Semua match disini pasti punya stream
-    const matchUrl = `/football/${stream?.id}`;
+    // Link ke match page pake FIXTURE ID + stream info sebagai query params
+    const streamId = stream?.id;
+    const provider = stream?.provider || 'sphere';
+    const matchUrl = fixtureId
+        ? `/match/${fixtureId}?stream=${streamId}&provider=${provider}`
+        : `/football/${streamId}`;
 
     return (
         <Link href={matchUrl}>
