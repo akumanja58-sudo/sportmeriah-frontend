@@ -43,6 +43,7 @@ export default function MatchPageClient({ params, searchParams }) {
 
     const fixtureId = params.id;
     const streamIdFromUrl = searchParams.get('stream');
+    const providerFromUrl = searchParams.get('provider') || 'sphere';
 
     const [fixture, setFixture] = useState(null);
     const [allFixtures, setAllFixtures] = useState([]);
@@ -76,7 +77,8 @@ export default function MatchPageClient({ params, searchParams }) {
                 const hasStream = fixtureData.fixture.stream || streamIdFromUrl;
                 if (isLiveStatus(fixtureData.fixture.status.short) && hasStream && !showPlayer) {
                     const sid = fixtureData.fixture.stream?.stream_id || streamIdFromUrl;
-                    startStream(sid);
+                    const prov = fixtureData.fixture.stream?.provider || providerFromUrl;
+                    startStream(sid, prov);
                 }
             }
 
@@ -90,14 +92,26 @@ export default function MatchPageClient({ params, searchParams }) {
         }
     };
 
-    const startStream = async (streamId) => {
+    const startStream = async (streamId, provider = 'sphere') => {
         if (!streamId) return;
 
         try {
             setStreamLoading(true);
 
-            // Direct IPTV HTTPS URL - no VPS needed!
-            const directUrl = `${API_URL}/api/stream/${streamId}.m3u8`;
+            let directUrl;
+            if (provider === 'pearl') {
+                // PearlIPTV - start stream via VPS proxy
+                try {
+                    const vpsRes = await fetch(`${API_URL}/api/streams/pearl/start/${streamId}`);
+                    const vpsData = await vpsRes.json();
+                    directUrl = vpsData.stream_url || `http://173.249.27.15/hls/pearl_${streamId}.m3u8`;
+                } catch (e) {
+                    directUrl = `http://173.249.27.15/hls/pearl_${streamId}.m3u8`;
+                }
+            } else {
+                // SphereIPTV - existing direct URL
+                directUrl = `${API_URL}/api/stream/${streamId}.m3u8`;
+            }
 
             setStreamUrl(directUrl);
             setShowPlayer(true);
@@ -184,6 +198,7 @@ export default function MatchPageClient({ params, searchParams }) {
     const isFinished = isFinishedStatus(status.short);
     const hasStream = !!stream || !!streamIdFromUrl;
     const actualStreamId = stream?.stream_id || streamIdFromUrl;
+    const streamProvider = stream?.provider || providerFromUrl;
     const matchTitle = `${teams.home.name} vs ${teams.away.name}`;
     const kickoffDisplay = formatKickoffTime(date);
 
@@ -299,7 +314,7 @@ export default function MatchPageClient({ params, searchParams }) {
                         /* LIVE but not started yet - show play button */
                         <div
                             className="bg-black rounded-lg w-full overflow-hidden shadow-2xl relative cursor-pointer min-h-[280px] sm:min-h-[350px] md:aspect-video"
-                            onClick={() => startStream(actualStreamId)}
+                            onClick={() => startStream(actualStreamId, streamProvider)}
                         >
                             {/* Background gradient */}
                             <div className="absolute inset-0 bg-gradient-to-b from-gray-800 to-gray-900 opacity-90"></div>
@@ -340,7 +355,7 @@ export default function MatchPageClient({ params, searchParams }) {
                                 <button
                                     onClick={(e) => {
                                         e.stopPropagation();
-                                        startStream(actualStreamId);
+                                        startStream(actualStreamId, streamProvider);
                                     }}
                                     className="bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 px-5 sm:py-3 sm:px-8 md:py-4 md:px-10 rounded-full text-sm sm:text-lg md:text-xl shadow-lg transition-all transform hover:scale-105 flex items-center gap-2"
                                 >
@@ -514,7 +529,7 @@ export default function MatchPageClient({ params, searchParams }) {
                             {otherLiveMatches.map((f) => (
                                 <Link
                                     key={f.id}
-                                    href={`/match/${f.id}?stream=${f.stream.stream_id}`}
+                                    href={`/match/${f.id}?stream=${f.stream.stream_id}&provider=${f.stream.provider || 'sphere'}`}
                                     className="block bg-gray-700 p-3 sm:p-4 rounded-lg shadow-md transition-all hover:bg-gray-600 flex justify-between items-center"
                                 >
                                     <span className="text-sm sm:text-base font-medium text-white truncate pr-4">
