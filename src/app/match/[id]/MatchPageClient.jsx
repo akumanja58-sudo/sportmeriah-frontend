@@ -314,7 +314,7 @@ export default function MatchPageClient({ params, searchParams }) {
                     ) : isLive && hasStream ? (
                         /* LIVE but not started yet - show play button */
                         <div
-                            className="bg-black rounded-lg w-full overflow-hidden shadow-2xl relative cursor-pointer min-h-[280px] sm:min-h-[350px] md:aspect-video"
+                            className="bg-black rounded-lg w-full overflow-hidden shadow-2xl relative cursor-pointer min-h-[350px] sm:min-h-[400px] md:aspect-video"
                             onClick={() => startStream(actualStreamId, streamProvider)}
                         >
                             {/* Background gradient */}
@@ -367,7 +367,7 @@ export default function MatchPageClient({ params, searchParams }) {
                         </div>
                     ) : (
                         /* UPCOMING - Show Info Only */
-                        <div className="bg-black rounded-lg w-full overflow-hidden shadow-2xl relative min-h-[280px] sm:min-h-[350px] md:aspect-video">
+                        <div className="bg-black rounded-lg w-full overflow-hidden shadow-2xl relative min-h-[350px] sm:min-h-[400px] md:aspect-video">
                             {/* Background gradient */}
                             <div className="absolute inset-0 bg-gradient-to-b from-gray-800 to-gray-900 opacity-90"></div>
 
