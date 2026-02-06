@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import Navbar from '../../components/Navbar';
 import VideoPlayer from '../../components/VideoPlayer';
+import Countdown from '../../components/Countdown';
 import Link from 'next/link';
 
 // React Icons
@@ -396,13 +397,8 @@ export default function MatchPageClient({ params, searchParams }) {
 
                                 <p className="text-gray-400 text-[11px] sm:text-sm mb-2 sm:mb-3">{league.name}</p>
 
-                                {/* Upcoming Status */}
-                                <div className="mb-3 sm:mb-4">
-                                    <div className="text-lg sm:text-xl md:text-2xl font-bold text-orange-400 mb-1">
-                                        ⏰ Upcoming
-                                    </div>
-                                    <p className="text-sm sm:text-base md:text-lg text-gray-300">Kickoff: {kickoffDisplay}</p>
-                                </div>
+                                {/* Countdown Timer */}
+                                <Countdown kickoffTime={date} />
 
                                 {/* Info Message */}
                                 <div className="text-center">
