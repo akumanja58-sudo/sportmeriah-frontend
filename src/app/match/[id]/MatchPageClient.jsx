@@ -42,8 +42,8 @@ function formatKickoffTime(dateString) {
 export default function MatchPageClient({ params, searchParams }) {
 
     const fixtureId = params.id;
-    const streamIdFromUrl = searchParams.get('stream');
-    const providerFromUrl = searchParams.get('provider') || 'sphere';
+    const streamIdFromUrl = searchParams?.stream || null;
+    const providerFromUrl = searchParams?.provider || 'sphere';
 
     const [fixture, setFixture] = useState(null);
     const [allFixtures, setAllFixtures] = useState([]);
