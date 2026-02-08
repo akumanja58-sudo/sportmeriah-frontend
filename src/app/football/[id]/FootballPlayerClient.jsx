@@ -142,11 +142,11 @@ export default function FootballPlayerClient({ fixtureId }) {
       if (provider === 'pearl') {
         // Start Pearl stream via VPS
         await fetch(`${API_URL}/api/streams/pearl/start/${streamId}`);
-        hlsUrl = `http://${VPS_IP}/hls/pearl_${streamId}.m3u8`;
+        hlsUrl = `https://${VPS_IP}/hls/pearl_${streamId}.m3u8`;
       } else {
         // Start Sphere stream via VPS
         await fetch(`${API_URL}/api/streams/start/${streamId}`);
-        hlsUrl = `http://${VPS_IP}/hls/${streamId}.m3u8`;
+        hlsUrl = `https://${VPS_IP}/hls/${streamId}.m3u8`;
       }
 
       // Wait for stream to be ready
