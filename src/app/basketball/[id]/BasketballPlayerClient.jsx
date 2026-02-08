@@ -11,7 +11,15 @@ import { IoHome } from 'react-icons/io5';
 import { MdSportsSoccer, MdSportsBasketball, MdPlayArrow, MdRefresh, MdShare, MdFullscreen, MdVolumeUp, MdVolumeOff } from 'react-icons/md';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://sportmeriah-backend-production.up.railway.app';
-const VPS_URL = 'http://173.249.27.15';
+
+// VPS proxy through backend to avoid mixed content
+const getProxyStreamUrl = (provider, streamId) => {
+    if (provider === 'pearl') {
+        // Use backend proxy endpoint for Pearl streams
+        return `${API_URL}/api/proxy/pearl/${streamId}.m3u8`;
+    }
+    return null;
+};
 
 const BANNERS = [
     { id: 1, src: 'https://inigambarku.site/images/2026/01/20/GIFMERIAH4D965a1f7cfb6a4aac.gif', link: '#' },
@@ -124,24 +132,25 @@ export default function BasketballPlayerClient({ streamId }) {
         }
     };
 
-    // Start Pearl stream via VPS proxy
+    // Start Pearl stream via VPS proxy (through backend)
     const startPearlStream = async (id) => {
         try {
+            // First, tell VPS to start the stream
             const response = await fetch(`${API_URL}/api/streams/pearl/start/${id}`, {
                 method: 'POST'
             });
             const data = await response.json();
 
-            if (data.success && data.stream_url) {
-                setStreamUrl(data.stream_url);
+            if (data.success) {
+                // Use backend proxy URL (HTTPS) instead of direct VPS URL (HTTP)
+                setStreamUrl(`${API_URL}/api/proxy/hls/pearl_${id}.m3u8`);
             } else {
-                // Fallback to direct VPS URL
-                setStreamUrl(`${VPS_URL}/hls/pearl_${id}.m3u8`);
+                setStreamUrl(`${API_URL}/api/proxy/hls/pearl_${id}.m3u8`);
             }
         } catch (err) {
             console.error('Error starting Pearl stream:', err);
-            // Fallback to direct VPS URL
-            setStreamUrl(`${VPS_URL}/hls/pearl_${id}.m3u8`);
+            // Fallback
+            setStreamUrl(`${API_URL}/api/proxy/hls/pearl_${id}.m3u8`);
         }
     };
 
