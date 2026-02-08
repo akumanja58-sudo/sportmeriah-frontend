@@ -132,25 +132,14 @@ export default function BasketballPlayerClient({ streamId }) {
         }
     };
 
-    // Start Pearl stream via VPS proxy (through backend)
+    // Start Pearl stream via direct proxy (no VPS restream)
     const startPearlStream = async (id) => {
         try {
-            // First, tell VPS to start the stream
-            const response = await fetch(`${API_URL}/api/streams/pearl/start/${id}`, {
-                method: 'POST'
-            });
-            const data = await response.json();
-
-            if (data.success) {
-                // Use backend proxy URL (HTTPS) instead of direct VPS URL (HTTP)
-                setStreamUrl(`${API_URL}/api/stream/pearl/${id}.m3u8`);
-            } else {
-                setStreamUrl(`${API_URL}/api/stream/pearl/${id}.m3u8`);
-            }
+            // Use direct Pearl proxy (no VPS FFmpeg needed)
+            setStreamUrl(`${API_URL}/api/stream/pearl-direct/${id}.m3u8`);
         } catch (err) {
             console.error('Error starting Pearl stream:', err);
-            // Fallback
-            setStreamUrl(`${API_URL}/api/stream/pearl/${id}.m3u8`);
+            setStreamUrl(`${API_URL}/api/stream/pearl-direct/${id}.m3u8`);
         }
     };
 
