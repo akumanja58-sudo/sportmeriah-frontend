@@ -163,13 +163,6 @@ export default function FootballPlayerClient({ fixtureId }) {
     }
   };
 
-  // Initialize player when streamUrl changes and video is rendered
-  useEffect(() => {
-    if (streamUrl && isPlaying && videoRef.current) {
-      initializePlayer(streamUrl);
-    }
-  }, [streamUrl, isPlaying, initializePlayer]);
-
   const initializePlayer = useCallback((url) => {
     if (!videoRef.current || !url) return;
 
@@ -214,6 +207,13 @@ export default function FootballPlayerClient({ fixtureId }) {
       });
     }
   }, []);
+
+  // Initialize player when streamUrl changes and video is rendered
+  useEffect(() => {
+    if (streamUrl && isPlaying && videoRef.current) {
+      initializePlayer(streamUrl);
+    }
+  }, [streamUrl, isPlaying, initializePlayer]);
 
   // ========== PLAYER CONTROLS ==========
   const togglePlay = () => {
