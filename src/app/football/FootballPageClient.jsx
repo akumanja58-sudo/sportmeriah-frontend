@@ -360,12 +360,10 @@ export default function FootballPageClient() {
 function MatchCard({ match, isLive }) {
     const { homeTeam, awayTeam, league, score, stream, date, elapsed, id: fixtureId } = match;
 
-    // Link ke match page pake FIXTURE ID + stream info sebagai query params
+    // Link ke football player page
     const streamId = stream?.id;
     const provider = stream?.provider || 'sphere';
-    const matchUrl = fixtureId
-        ? `/match/${fixtureId}?stream=${streamId}&provider=${provider}`
-        : `/football/${streamId}`;
+    const matchUrl = `/football/${fixtureId}?stream=${streamId}&provider=${provider}`;
 
     return (
         <Link href={matchUrl}>

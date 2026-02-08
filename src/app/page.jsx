@@ -488,12 +488,10 @@ export default function Home() {
 function FootballMatchCard({ match, isLive }) {
     const { homeTeam, awayTeam, league, score, stream, date, elapsed, id: fixtureId } = match;
 
-    // Link ke match page - pake fixture ID jika ada, fallback ke stream ID
+    // Link ke football player page
     const streamId = stream?.id;
     const provider = stream?.provider || 'sphere';
-    const matchUrl = fixtureId
-        ? `/match/${fixtureId}?stream=${streamId}&provider=${provider}`
-        : `/football/${streamId}`;
+    const matchUrl = `/football/${fixtureId}?stream=${streamId}&provider=${provider}`;
 
     return (
         <Link href={matchUrl}>
