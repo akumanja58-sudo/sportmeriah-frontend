@@ -137,11 +137,9 @@ export default function BasketballPlayerClient({ streamId }) {
         try {
             setError(null);
 
-            // 1. Tell VPS to start FFmpeg restream
+            // 1. Tell VPS to start FFmpeg restream (GET request)
             console.log('Starting Pearl stream via VPS...');
-            const response = await fetch(`${API_URL}/api/streams/pearl/start/${id}`, {
-                method: 'POST'
-            });
+            const response = await fetch(`${API_URL}/api/streams/pearl/start/${id}`);
             const data = await response.json();
             console.log('VPS response:', data);
 
