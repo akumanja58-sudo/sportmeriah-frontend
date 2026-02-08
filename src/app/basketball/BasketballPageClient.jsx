@@ -320,8 +320,9 @@ function MatchCard({ match, isLive, isFinished = false }) {
     const { homeTeam, awayTeam, league, score, stream, date, quarter, timer } = match;
     const hasStream = !!stream?.id;
 
-    // Link ke player page dengan stream ID
-    const matchUrl = hasStream ? `/basketball/${stream.id}` : '#';
+    // Link ke player page dengan stream ID dan provider
+    const provider = stream?.provider || 'sphere';
+    const matchUrl = hasStream ? `/basketball/${stream.id}?provider=${provider}` : '#';
 
     // Format quarter display
     const getQuarterDisplay = () => {
@@ -413,10 +414,11 @@ function MatchCard({ match, isLive, isFinished = false }) {
 
 // ========== CHANNEL CARD COMPONENT ==========
 function ChannelCard({ channel }) {
-    const { id, name, category } = channel;
+    const { id, name, category, provider } = channel;
+    const channelProvider = provider || 'sphere';
 
     return (
-        <Link href={`/basketball/${id}`}>
+        <Link href={`/basketball/${id}?provider=${channelProvider}`}>
             <div className="bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors cursor-pointer group overflow-hidden">
 
                 {/* Header */}

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Navbar from '../../components/Navbar';
 import Hls from 'hls.js';
@@ -10,6 +11,7 @@ import { IoHome } from 'react-icons/io5';
 import { MdSportsSoccer, MdSportsBasketball, MdPlayArrow, MdRefresh, MdShare, MdFullscreen, MdVolumeUp, MdVolumeOff } from 'react-icons/md';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://sportmeriah-backend-production.up.railway.app';
+const VPS_URL = 'http://173.249.27.15';
 
 const BANNERS = [
     { id: 1, src: 'https://inigambarku.site/images/2026/01/20/GIFMERIAH4D965a1f7cfb6a4aac.gif', link: '#' },
@@ -24,15 +26,19 @@ const parseChannelName = (name) => {
 
     let cleanName = name;
 
-    // Remove prefix like "USA Real NBA 01: " or "USA NBA 01: "
+    // Remove prefix like "USA Real NBA 01: " or "NBA 01: " or "NBA 01 :"
     cleanName = cleanName.replace(/^USA\s*(Real\s*)?(NBA|Soccer)\s*\d*:\s*/i, '');
+    cleanName = cleanName.replace(/^NBA\s*\d*\s*:\s*/i, '');
 
-    // Remove time suffix like "@ 8:30 PM" or "( ABC Feed ) @ 8:30 PM"
+    // Remove time suffix like "@ 8:30 PM" or "( ABC Feed ) @ 8:30 PM" or "// UK Sat..."
     cleanName = cleanName.replace(/\s*\([^)]*\)\s*@\s*[\d:]+\s*(AM|PM)?.*$/i, '');
     cleanName = cleanName.replace(/\s*@\s*[\d:]+\s*(AM|PM)?.*$/i, '');
+    cleanName = cleanName.replace(/\s*@\s*Feb.*$/i, '');
+    cleanName = cleanName.replace(/\s*\/\/.*$/i, '');
+    cleanName = cleanName.replace(/\s*:NBA\s*\d*$/i, '');
 
-    // Try to extract teams from "Team A VS Team B" or "Team A vs Team B"
-    const vsMatch = cleanName.match(/(.+?)\s+(?:VS|vs|v)\s+(.+)/i);
+    // Try to extract teams from "Team A VS Team B" or "Team A vs Team B" or "Team A @ Team B"
+    const vsMatch = cleanName.match(/(.+?)\s+(?:VS|vs|v|@)\s+(.+)/i);
     if (vsMatch) {
         return {
             title: `${vsMatch[1].trim()} vs ${vsMatch[2].trim()}`,
@@ -46,6 +52,9 @@ const parseChannelName = (name) => {
 };
 
 export default function BasketballPlayerClient({ streamId }) {
+    const searchParams = useSearchParams();
+    const provider = searchParams.get('provider') || 'sphere';
+
     const [matchData, setMatchData] = useState(null);
     const [streamInfo, setStreamInfo] = useState(null);
     const [parsedInfo, setParsedInfo] = useState({ title: 'Live Stream', homeTeam: null, awayTeam: null, league: 'NBA' });
@@ -56,7 +65,8 @@ export default function BasketballPlayerClient({ streamId }) {
     const [isMuted, setIsMuted] = useState(false);
     const [copied, setCopied] = useState(false);
     const [countdown, setCountdown] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
-    const [matchStatus, setMatchStatus] = useState('scheduled');
+    const [matchStatus, setMatchStatus] = useState('live'); // Default to live for channels
+    const [streamUrl, setStreamUrl] = useState(null);
 
     const videoRef = useRef(null);
     const hlsRef = useRef(null);
@@ -69,13 +79,17 @@ export default function BasketballPlayerClient({ streamId }) {
             if (hlsRef.current) hlsRef.current.destroy();
             if (countdownRef.current) clearInterval(countdownRef.current);
         };
-    }, [streamId]);
+    }, [streamId, provider]);
 
     const fetchStreamInfo = async () => {
         try {
             setError(null);
-            const response = await fetch(`${API_URL}/api/basketball/stream/${streamId}`);
+            setLoading(true);
+
+            // Fetch stream info with provider parameter
+            const response = await fetch(`${API_URL}/api/basketball/stream/${streamId}?provider=${provider}`);
             const data = await response.json();
+
             if (data.success) {
                 setStreamInfo(data.stream);
 
@@ -88,15 +102,46 @@ export default function BasketballPlayerClient({ streamId }) {
                     setMatchData(data.match);
                     initializeMatchStatus(data.match);
                 } else {
+                    // No match data - treat as live channel
                     setMatchStatus('live');
+                }
+
+                // For Pearl provider, start the VPS proxy stream
+                if (data.stream?.provider === 'pearl') {
+                    await startPearlStream(streamId);
+                } else {
+                    // For Sphere, use direct stream URL
+                    setStreamUrl(data.stream?.url);
                 }
             } else {
                 setError('Stream tidak ditemukan');
             }
         } catch (err) {
+            console.error('Error fetching stream:', err);
             setError('Gagal memuat stream');
         } finally {
             setLoading(false);
+        }
+    };
+
+    // Start Pearl stream via VPS proxy
+    const startPearlStream = async (id) => {
+        try {
+            const response = await fetch(`${API_URL}/api/streams/pearl/start/${id}`, {
+                method: 'POST'
+            });
+            const data = await response.json();
+
+            if (data.success && data.stream_url) {
+                setStreamUrl(data.stream_url);
+            } else {
+                // Fallback to direct VPS URL
+                setStreamUrl(`${VPS_URL}/hls/pearl_${id}.m3u8`);
+            }
+        } catch (err) {
+            console.error('Error starting Pearl stream:', err);
+            // Fallback to direct VPS URL
+            setStreamUrl(`${VPS_URL}/hls/pearl_${id}.m3u8`);
         }
     };
 
@@ -123,7 +168,6 @@ export default function BasketballPlayerClient({ streamId }) {
             startCountdown(matchTime);
         } else if (now - matchTime < liveWindow) {
             setMatchStatus('live');
-            setTimeout(() => startStream(), 1000);
         } else {
             setMatchStatus('finished');
         }
@@ -136,7 +180,6 @@ export default function BasketballPlayerClient({ streamId }) {
             if (diff <= 0) {
                 clearInterval(countdownRef.current);
                 setMatchStatus('live');
-                setTimeout(() => startStream(), 1000);
                 return;
             }
             setCountdown({
@@ -151,11 +194,18 @@ export default function BasketballPlayerClient({ streamId }) {
     };
 
     const startStream = useCallback(() => {
-        if (!streamId || !videoRef.current) return;
-        const streamUrl = `${API_URL}/api/stream/${streamId}.m3u8`;
+        if (!streamUrl || !videoRef.current) return;
+
         if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; }
+
         if (Hls.isSupported()) {
-            const hls = new Hls({ enableWorker: true, lowLatencyMode: true, backBufferLength: 90 });
+            const hls = new Hls({
+                enableWorker: true,
+                lowLatencyMode: true,
+                backBufferLength: 90,
+                maxBufferLength: 30,
+                maxMaxBufferLength: 60,
+            });
             hls.loadSource(streamUrl);
             hls.attachMedia(videoRef.current);
             hls.on(Hls.Events.MANIFEST_PARSED, () => {
@@ -163,9 +213,14 @@ export default function BasketballPlayerClient({ streamId }) {
             });
             hls.on(Hls.Events.ERROR, (event, data) => {
                 if (data.fatal) {
-                    if (data.type === Hls.ErrorTypes.NETWORK_ERROR) hls.startLoad();
-                    else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) hls.recoverMediaError();
-                    else setError('Stream error. Silakan refresh.');
+                    if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+                        console.log('Network error, retrying...');
+                        setTimeout(() => hls.startLoad(), 2000);
+                    } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+                        hls.recoverMediaError();
+                    } else {
+                        setError('Stream error. Silakan refresh.');
+                    }
                 }
             });
             hlsRef.current = hls;
@@ -175,12 +230,21 @@ export default function BasketballPlayerClient({ streamId }) {
                 videoRef.current.play().then(() => setIsPlaying(true)).catch(() => { });
             });
         }
-    }, [streamId]);
+    }, [streamUrl]);
 
     const refreshStream = () => {
-        setIsPlaying(false); setError(null);
+        setIsPlaying(false);
+        setError(null);
         if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; }
-        setTimeout(() => startStream(), 500);
+
+        // Re-fetch stream for Pearl provider
+        if (provider === 'pearl') {
+            startPearlStream(streamId).then(() => {
+                setTimeout(() => startStream(), 1000);
+            });
+        } else {
+            setTimeout(() => startStream(), 500);
+        }
     };
 
     const toggleMute = () => { if (videoRef.current) { videoRef.current.muted = !videoRef.current.muted; setIsMuted(!isMuted); } };
@@ -297,6 +361,13 @@ export default function BasketballPlayerClient({ streamId }) {
                                     <MdSportsBasketball /> {displayLeague}
                                 </p>
 
+                                {/* Provider Badge */}
+                                {streamInfo?.provider && (
+                                    <p className="text-xs text-gray-500 mb-2">
+                                        Provider: {streamInfo.provider.toUpperCase()}
+                                    </p>
+                                )}
+
                                 {/* Status */}
                                 <div className="mb-4">
                                     {matchStatus === 'scheduled' && (
@@ -322,10 +393,13 @@ export default function BasketballPlayerClient({ streamId }) {
                                 </div>
 
                                 {/* Play Button */}
-                                {matchStatus !== 'finished' && (
+                                {matchStatus !== 'finished' && streamUrl && (
                                     <button onClick={(e) => { e.stopPropagation(); startStream(); }} className="bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 px-6 sm:px-8 rounded-full text-base sm:text-lg shadow-lg transition-all transform hover:scale-105 flex items-center gap-2">
                                         <MdPlayArrow className="text-xl sm:text-2xl" /> Mulai Nonton
                                     </button>
+                                )}
+                                {matchStatus !== 'finished' && !streamUrl && (
+                                    <p className="text-gray-400">Mempersiapkan stream...</p>
                                 )}
                                 {matchStatus === 'finished' && (
                                     <Link href="/basketball" className="bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 px-6 rounded-full shadow-lg transition-all">
@@ -456,7 +530,7 @@ export default function BasketballPlayerClient({ streamId }) {
                             {relatedMatches.length > 0 ? (
                                 <div className="space-y-2">
                                     {relatedMatches.map((match, index) => (
-                                        <Link key={match.id || index} href={`/basketball/${match.stream?.id}`} className="block bg-gray-700 hover:bg-gray-600 rounded-lg p-2.5 sm:p-3 transition">
+                                        <Link key={match.id || index} href={`/basketball/${match.stream?.id}?provider=${match.stream?.provider || 'sphere'}`} className="block bg-gray-700 hover:bg-gray-600 rounded-lg p-2.5 sm:p-3 transition">
                                             <div className="flex items-center gap-2 mb-1">
                                                 <img src={match.homeTeam?.logo} alt="" className="w-4 h-4 object-contain" onError={(e) => e.target.src = 'https://placehold.co/16x16/374151/ffffff?text=🏀'} />
                                                 <span className="text-white text-xs truncate flex-1">{match.homeTeam?.name}</span>
