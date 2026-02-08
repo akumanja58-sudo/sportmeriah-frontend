@@ -132,14 +132,33 @@ export default function BasketballPlayerClient({ streamId }) {
         }
     };
 
-    // Start Pearl stream via direct proxy (no VPS restream)
+    // Start Pearl stream via VPS FFmpeg restream
     const startPearlStream = async (id) => {
         try {
-            // Use direct Pearl proxy (no VPS FFmpeg needed)
-            setStreamUrl(`${API_URL}/api/stream/pearl-direct/${id}.m3u8`);
+            setError(null);
+
+            // 1. Tell VPS to start FFmpeg restream
+            console.log('Starting Pearl stream via VPS...');
+            const response = await fetch(`${API_URL}/api/streams/pearl/start/${id}`, {
+                method: 'POST'
+            });
+            const data = await response.json();
+            console.log('VPS response:', data);
+
+            if (data.success) {
+                // 2. Wait 5 seconds for FFmpeg to generate HLS segments
+                console.log('Waiting for HLS segments...');
+                await new Promise(resolve => setTimeout(resolve, 5000));
+
+                // 3. Set stream URL (direct to VPS - will handle via proxy)
+                // Use backend proxy to avoid mixed content
+                setStreamUrl(`${API_URL}/api/stream/pearl/${id}.m3u8`);
+            } else {
+                setError('Gagal memulai stream');
+            }
         } catch (err) {
             console.error('Error starting Pearl stream:', err);
-            setStreamUrl(`${API_URL}/api/stream/pearl-direct/${id}.m3u8`);
+            setError('Gagal memulai stream');
         }
     };
 
