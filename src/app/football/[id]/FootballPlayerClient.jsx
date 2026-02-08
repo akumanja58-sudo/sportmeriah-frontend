@@ -76,7 +76,7 @@ export default function FootballPlayerClient({ fixtureId }) {
         // Check status and auto-start if LIVE
         const status = data.fixture.status?.short || 'NS';
         if (isLiveStatus(status)) {
-          const sid = data.fixture.stream?.stream_id || streamIdFromUrl;
+          const sid = streamIdFromUrl || data.fixture.stream?.stream_id;
           const prov = data.fixture.stream?.provider || providerFromUrl;
           if (sid) {
             setTimeout(() => startStream(sid, prov), 500);
@@ -243,7 +243,7 @@ export default function FootballPlayerClient({ fixtureId }) {
   };
 
   const refreshStream = () => {
-    const sid = fixture?.stream?.stream_id || streamIdFromUrl;
+    const sid = streamIdFromUrl || fixture?.stream?.stream_id;
     const prov = fixture?.stream?.provider || providerFromUrl;
     if (sid) {
       startStream(sid, prov);
@@ -271,8 +271,8 @@ export default function FootballPlayerClient({ fixtureId }) {
   const shareUrl = typeof window !== 'undefined' ? window.location.href : '';
   const shareText = `🔴 Nonton ${matchTitle} LIVE di SportMeriah!`;
 
-  const hasStream = !!(fixture?.stream?.stream_id || streamIdFromUrl);
-  const actualStreamId = fixture?.stream?.stream_id || streamIdFromUrl;
+  const hasStream = !!(streamIdFromUrl || fixture?.stream?.stream_id);
+  const actualStreamId = streamIdFromUrl || fixture?.stream?.stream_id;
   const streamProvider = fixture?.stream?.provider || providerFromUrl;
 
   // Format kickoff time
