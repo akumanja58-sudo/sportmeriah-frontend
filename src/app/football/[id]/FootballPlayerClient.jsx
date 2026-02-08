@@ -152,8 +152,9 @@ export default function FootballPlayerClient({ fixtureId }) {
       // Wait for stream to be ready
       await new Promise(resolve => setTimeout(resolve, 2000));
 
+      // Set states - video will render, then useEffect will initialize player
       setStreamUrl(hlsUrl);
-      initializePlayer(hlsUrl);
+      setIsPlaying(true);
     } catch (error) {
       console.error('Failed to start stream:', error);
       setError('Gagal memulai stream');
@@ -161,6 +162,13 @@ export default function FootballPlayerClient({ fixtureId }) {
       setStreamLoading(false);
     }
   };
+
+  // Initialize player when streamUrl changes and video is rendered
+  useEffect(() => {
+    if (streamUrl && isPlaying && videoRef.current) {
+      initializePlayer(streamUrl);
+    }
+  }, [streamUrl, isPlaying, initializePlayer]);
 
   const initializePlayer = useCallback((url) => {
     if (!videoRef.current || !url) return;
