@@ -1,27 +1,24 @@
 import FootballPlayerClient from './FootballPlayerClient';
 
-export async function generateMetadata({ params }) {
-  const { id } = await params;
+const API_URL = 'https://sportmeriah-backend-production.up.railway.app';
+
+export async function generateMetadata({ params, searchParams }) {
+  const { id: fixtureId } = await params;
 
   // Default metadata
-  let title = 'Live Streaming Football | SportMeriah';
-  let description = 'Nonton live streaming football gratis di SportMeriah. Kualitas HD, tanpa buffering.';
+  let title = 'Live Streaming Sepakbola | SportMeriah';
+  let description = 'Nonton live streaming sepakbola gratis di SportMeriah. Kualitas HD, tanpa buffering.';
 
   try {
-    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://sportmeriah-backend-production.up.railway.app';
-    const res = await fetch(`${API_URL}/api/football/stream/${id}`, { next: { revalidate: 60 } });
+    const res = await fetch(`${API_URL}/api/fixtures/${fixtureId}`, { next: { revalidate: 60 } });
     const data = await res.json();
 
-    if (data.success && data.stream) {
-      const streamName = data.stream.name || 'Football';
-      title = `${streamName} - Live Streaming | SportMeriah`;
-      description = `Nonton ${streamName} live streaming gratis di SportMeriah. Kualitas HD, server stabil, tanpa buffering.`;
-    }
+    if (data.success && data.fixture) {
+      const fixture = data.fixture;
+      const homeName = fixture.teams?.home?.name || 'Home';
+      const awayName = fixture.teams?.away?.name || 'Away';
+      const leagueName = fixture.league?.name || 'Football';
 
-    if (data.match) {
-      const homeName = data.match.homeTeam?.name || 'Home';
-      const awayName = data.match.awayTeam?.name || 'Away';
-      const leagueName = data.match.league?.name || 'Football';
       title = `${homeName} vs ${awayName} - ${leagueName} Live | SportMeriah`;
       description = `Nonton ${homeName} vs ${awayName} (${leagueName}) live streaming gratis di SportMeriah. Kualitas HD, tanpa buffering.`;
     }
@@ -46,7 +43,7 @@ export async function generateMetadata({ params }) {
   };
 }
 
-export default async function FootballPlayerPage({ params }) {
-  const { id } = await params;
-  return <FootballPlayerClient streamId={id} />;
+export default async function FootballPlayerPage({ params, searchParams }) {
+  const { id: fixtureId } = await params;
+  return <FootballPlayerClient fixtureId={fixtureId} />;
 }
