@@ -573,7 +573,7 @@ function BasketballMatchCard({ match, isLive }) {
     const { homeTeam, awayTeam, league, score, stream, date, quarter, timer } = match;
 
     // Link ke player page dengan stream ID
-    const matchUrl = `/basketball/${stream?.id}`;
+    const matchUrl = `/basketball/${stream?.id}?provider=${stream?.provider || 'sphere'}`;
 
     // Format quarter display
     const getQuarterDisplay = () => {
