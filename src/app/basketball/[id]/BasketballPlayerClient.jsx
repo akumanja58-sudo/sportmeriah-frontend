@@ -137,19 +137,19 @@ export default function BasketballPlayerClient({ streamId }) {
         try {
             setError(null);
 
-            // 1. Tell VPS to start FFmpeg restream (GET request)
+            // Stop ALL running streams first (max_connections = 1)
+            console.log('Stopping existing streams...');
+            await fetch(`${API_URL}/api/streams/pearl/stop-all`).catch(() => { });
+            await new Promise(resolve => setTimeout(resolve, 2000));
+
             console.log('Starting Pearl stream via VPS...');
             const response = await fetch(`${API_URL}/api/streams/pearl/start/${id}`);
             const data = await response.json();
             console.log('VPS response:', data);
 
             if (data.success) {
-                // 2. Wait 5 seconds for FFmpeg to generate HLS segments
                 console.log('Waiting for HLS segments...');
                 await new Promise(resolve => setTimeout(resolve, 5000));
-
-                // 3. Set stream URL (direct to VPS - will handle via proxy)
-                // Use backend proxy to avoid mixed content
                 setStreamUrl(`https://stream.sportmeriah.com/hls/pearl_${id}.m3u8`);
             } else {
                 setError('Gagal memulai stream');

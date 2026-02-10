@@ -140,17 +140,20 @@ export default function FootballPlayerClient({ fixtureId }) {
 
       let hlsUrl;
       if (provider === 'pearl') {
+        // Stop existing streams first (max_connections = 1)
+        await fetch(`${API_URL}/api/streams/pearl/stop-all`).catch(() => { });
+        await new Promise(resolve => setTimeout(resolve, 2000));
+
         await fetch(`${API_URL}/api/streams/pearl/start/${streamId}`);
         hlsUrl = `https://stream.sportmeriah.com/hls/pearl_${streamId}.m3u8`;
       } else {
         await fetch(`${API_URL}/api/streams/start/${streamId}`);
-        hlsUrl = `https://stream.sportmeriah.com/hls/pearl_${streamId}.m3u8`;
+        hlsUrl = `${API_URL}/api/stream/${streamId}.m3u8`;
       }
 
       // Wait for stream to be ready
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise(resolve => setTimeout(resolve, 5000));
 
-      // Set states - video will render, then useEffect will initialize player
       setStreamUrl(hlsUrl);
       setIsPlaying(true);
     } catch (error) {
