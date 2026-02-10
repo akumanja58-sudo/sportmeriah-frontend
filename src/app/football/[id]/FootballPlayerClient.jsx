@@ -141,10 +141,10 @@ export default function FootballPlayerClient({ fixtureId }) {
       let hlsUrl;
       if (provider === 'pearl') {
         await fetch(`${API_URL}/api/streams/pearl/start/${streamId}`);
-        hlsUrl = `${API_URL}/api/stream/pearl/${streamId}.m3u8`;
+        hlsUrl = `https://stream.sportmeriah.com/hls/pearl_${streamId}.m3u8`;
       } else {
         await fetch(`${API_URL}/api/streams/start/${streamId}`);
-        hlsUrl = `${API_URL}/api/stream/${streamId}.m3u8`;
+        hlsUrl = `https://stream.sportmeriah.com/hls/pearl_${streamId}.m3u8`;
       }
 
       // Wait for stream to be ready

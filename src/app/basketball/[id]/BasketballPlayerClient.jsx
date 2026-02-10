@@ -150,7 +150,7 @@ export default function BasketballPlayerClient({ streamId }) {
 
                 // 3. Set stream URL (direct to VPS - will handle via proxy)
                 // Use backend proxy to avoid mixed content
-                setStreamUrl(`${API_URL}/api/stream/pearl/${id}.m3u8`);
+                setStreamUrl(`https://stream.sportmeriah.com/hls/pearl_${id}.m3u8`);
             } else {
                 setError('Gagal memulai stream');
             }
