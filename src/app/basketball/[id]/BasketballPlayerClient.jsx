@@ -143,22 +143,10 @@ export default function BasketballPlayerClient({ streamId }) {
             console.log('VPS response:', data);
 
             if (data.success) {
-                // Poll until m3u8 is ready (max 15 detik)
-                const hlsUrl = `https://stream.sportmeriah.com/hls/pearl_${id}.m3u8`;
-                let ready = false;
-                for (let i = 0; i < 15; i++) {
-                    try {
-                        const check = await fetch(hlsUrl, { method: 'HEAD' });
-                        if (check.ok) { ready = true; break; }
-                    } catch (e) { }
-                    await new Promise(resolve => setTimeout(resolve, 1000));
-                }
-                if (ready) {
-                    setStreamUrl(hlsUrl);
-                } else {
-                    // Fallback: set anyway after 15s
-                    setStreamUrl(hlsUrl);
-                }
+                // Kalau stream sudah running, tunggu lebih sebentar
+                const waitTime = data.message?.includes('already running') ? 1000 : 8000;
+                await new Promise(resolve => setTimeout(resolve, waitTime));
+                setStreamUrl(`https://stream.sportmeriah.com/hls/pearl_${id}.m3u8`);
             } else {
                 setError('Gagal memulai stream');
             }
