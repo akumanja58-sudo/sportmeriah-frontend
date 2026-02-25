@@ -140,10 +140,6 @@ export default function FootballPlayerClient({ fixtureId }) {
 
       let hlsUrl;
       if (provider === 'pearl') {
-        // Stop existing streams first (max_connections = 1)
-        await fetch(`${API_URL}/api/streams/pearl/stop-all`).catch(() => { });
-        await new Promise(resolve => setTimeout(resolve, 2000));
-
         await fetch(`${API_URL}/api/streams/pearl/start/${streamId}`);
         hlsUrl = `https://stream.sportmeriah.com/hls/pearl_${streamId}.m3u8`;
       } else {
@@ -175,8 +171,22 @@ export default function FootballPlayerClient({ fixtureId }) {
     if (Hls.isSupported()) {
       const hls = new Hls({
         enableWorker: true,
-        lowLatencyMode: true,
+        lowLatencyMode: false,
         backBufferLength: 90,
+        maxBufferLength: 60,
+        maxMaxBufferLength: 120,
+        maxBufferSize: 60 * 1000 * 1000,
+        maxBufferHole: 1.0,
+        liveSyncDurationCount: 4,
+        liveMaxLatencyDurationCount: 8,
+        liveDurationInfinity: true,
+        manifestLoadingMaxRetry: 10,
+        manifestLoadingRetryDelay: 1000,
+        levelLoadingMaxRetry: 10,
+        levelLoadingRetryDelay: 1000,
+        fragLoadingMaxRetry: 10,
+        fragLoadingRetryDelay: 1000,
+        startPosition: -1,
       });
 
       hls.loadSource(url);
@@ -192,7 +202,13 @@ export default function FootballPlayerClient({ fixtureId }) {
         if (data.fatal) {
           console.error('HLS fatal error:', data);
           if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
-            setTimeout(() => hls.startLoad(), 3000);
+            hls.startLoad();
+          } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+            hls.recoverMediaError();
+          } else {
+            hls.destroy();
+            hls.loadSource(url);
+            hls.attachMedia(videoRef.current);
           }
         }
       });
