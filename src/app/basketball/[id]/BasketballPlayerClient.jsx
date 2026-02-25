@@ -137,11 +137,6 @@ export default function BasketballPlayerClient({ streamId }) {
         try {
             setError(null);
 
-            // Stop ALL running streams first (max_connections = 1)
-            console.log('Stopping existing streams...');
-            await fetch(`${API_URL}/api/streams/pearl/stop-all`).catch(() => { });
-            await new Promise(resolve => setTimeout(resolve, 2000));
-
             console.log('Starting Pearl stream via VPS...');
             const response = await fetch(`${API_URL}/api/streams/pearl/start/${id}`);
             const data = await response.json();
