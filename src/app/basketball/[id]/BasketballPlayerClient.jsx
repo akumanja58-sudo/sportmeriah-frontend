@@ -216,10 +216,22 @@ export default function BasketballPlayerClient({ streamId }) {
         if (Hls.isSupported()) {
             const hls = new Hls({
                 enableWorker: true,
-                lowLatencyMode: true,
+                lowLatencyMode: false,
                 backBufferLength: 90,
-                maxBufferLength: 30,
-                maxMaxBufferLength: 60,
+                maxBufferLength: 60,
+                maxMaxBufferLength: 120,
+                maxBufferSize: 60 * 1000 * 1000,
+                maxBufferHole: 1.0,
+                liveSyncDurationCount: 4,
+                liveMaxLatencyDurationCount: 8,
+                liveDurationInfinity: true,
+                manifestLoadingMaxRetry: 10,
+                manifestLoadingRetryDelay: 1000,
+                levelLoadingMaxRetry: 10,
+                levelLoadingRetryDelay: 1000,
+                fragLoadingMaxRetry: 10,
+                fragLoadingRetryDelay: 1000,
+                startPosition: -1,
             });
             hls.loadSource(streamUrl);
             hls.attachMedia(videoRef.current);
