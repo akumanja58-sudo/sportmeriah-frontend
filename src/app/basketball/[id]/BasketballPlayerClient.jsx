@@ -415,13 +415,23 @@ export default function BasketballPlayerClient({ streamId }) {
                                 </div>
 
                                 {/* Play Button */}
-                                {matchStatus !== 'finished' && streamUrl && (
-                                    <button onClick={(e) => { e.stopPropagation(); startStream(); }} className="bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 px-6 sm:px-8 rounded-full text-base sm:text-lg shadow-lg transition-all transform hover:scale-105 flex items-center gap-2">
-                                        <MdPlayArrow className="text-xl sm:text-2xl" /> Mulai Nonton
+                                {matchStatus !== 'finished' && (
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            if (streamUrl) {
+                                                startStream();
+                                            }
+                                            // else: still loading, do nothing (button disabled)
+                                        }}
+                                        disabled={!streamUrl}
+                                        className={`font-bold py-3 px-6 sm:px-8 rounded-full text-base sm:text-lg shadow-lg transition-all transform flex items-center gap-2 ${streamUrl
+                                                ? 'bg-orange-600 hover:bg-orange-700 text-white hover:scale-105 active:scale-95'
+                                                : 'bg-gray-700 text-gray-400 cursor-wait'
+                                            }`}>
+                                        <MdPlayArrow className="text-xl sm:text-2xl" />
+                                        {streamUrl ? 'Mulai Nonton' : 'Mempersiapkan...'}
                                     </button>
-                                )}
-                                {matchStatus !== 'finished' && !streamUrl && (
-                                    <p className="text-gray-400">Mempersiapkan stream...</p>
                                 )}
                                 {matchStatus === 'finished' && (
                                     <Link href="/basketball" className="bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 px-6 rounded-full shadow-lg transition-all">
