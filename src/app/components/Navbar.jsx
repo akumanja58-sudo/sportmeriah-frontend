@@ -98,7 +98,7 @@ export default function Navbar() {
                                 Live Sepakbola
                             </Link>
                             <a
-                                href="https://www.nobarmeriah.com/"
+                                href="https://www.scoremeriah.com/"
                                 target="_blank"
                                 className="text-xs font-semibold px-3 py-2 uppercase tracking-wide text-gray-400 hover:text-white transition-colors"
                             >
@@ -144,7 +144,7 @@ export default function Navbar() {
                         <Link href="/football" className="block px-4 py-3 text-gray-300 hover:text-green-500 hover:bg-gray-800 rounded-lg" onClick={() => setMobileMenuOpen(false)}>
                             ⚽ Live Sepakbola
                         </Link>
-                        <a href="https://www.nobarmeriah.com/" target="_blank" className="block px-4 py-3 text-gray-300 hover:text-green-500 hover:bg-gray-800 rounded-lg">
+                        <a href="https://www.scoremeriah.com/" target="_blank" className="block px-4 py-3 text-gray-300 hover:text-green-500 hover:bg-gray-800 rounded-lg">
                             📊 Live Skor
                         </a>
                         <a href="#" className="block px-4 py-3 text-gray-300 hover:text-green-500 hover:bg-gray-800 rounded-lg">🎬 Highlight</a>
@@ -160,8 +160,8 @@ export default function Navbar() {
                                     key={cat.id}
                                     href={`/${cat.id}`}
                                     className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${isCategoryActive(cat.id)
-                                            ? 'text-green-500 bg-green-500/10'
-                                            : 'text-gray-300 hover:text-green-500 hover:bg-gray-800'
+                                        ? 'text-green-500 bg-green-500/10'
+                                        : 'text-gray-300 hover:text-green-500 hover:bg-gray-800'
                                         }`}
                                     onClick={() => setMobileMenuOpen(false)}
                                 >
@@ -194,8 +194,8 @@ export default function Navbar() {
                                         key={cat.id}
                                         href={`/${cat.id}`}
                                         className={`flex items-center gap-2 text-sm px-4 py-2 whitespace-nowrap transition-colors ${isCategoryActive(cat.id)
-                                                ? 'text-green-500'
-                                                : 'text-gray-300 hover:text-green-500'
+                                            ? 'text-green-500'
+                                            : 'text-gray-300 hover:text-green-500'
                                             }`}
                                     >
                                         <IconComponent
@@ -245,8 +245,8 @@ export default function Navbar() {
                                                         key={cat.id}
                                                         href={`/${cat.id}`}
                                                         className={`flex items-center gap-3 px-4 py-3 text-sm transition-colors ${isCategoryActive(cat.id)
-                                                                ? 'text-green-500 bg-green-500/10'
-                                                                : 'text-gray-300 hover:text-green-500 hover:bg-gray-700'
+                                                            ? 'text-green-500 bg-green-500/10'
+                                                            : 'text-gray-300 hover:text-green-500 hover:bg-gray-700'
                                                             }`}
                                                         onClick={() => setDropdownOpen(false)}
                                                     >
@@ -267,8 +267,8 @@ export default function Navbar() {
                             <Link
                                 href="/jadwal"
                                 className={`flex items-center gap-2 text-sm px-4 py-2 whitespace-nowrap transition-colors ${isActive('/jadwal')
-                                        ? 'text-green-500'
-                                        : 'text-gray-300 hover:text-green-500'
+                                    ? 'text-green-500'
+                                    : 'text-gray-300 hover:text-green-500'
                                     }`}
                             >
                                 <IoCalendarOutline
