@@ -15,12 +15,12 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://sportmeriah-backend-
 const VPS_IP = '173.249.27.15';
 
 // Banner images
-const BANNERS = [
-  { id: 1, src: 'https://inigambarku.site/images/2026/01/20/GIFMERIAH4D965a1f7cfb6a4aac.gif', link: '#' },
-  { id: 2, src: 'https://inigambarku.site/images/2026/02/01/promo-penaslot.gif', link: '#' },
-  { id: 3, src: 'https://inigambarku.site/images/2026/01/20/promo-pesiarbet.gif', link: '#' },
-  { id: 4, src: 'https://inigambarku.site/images/2026/01/20/promo-girang4d.gif', link: '#' },
-];
+// const BANNERS = [
+//   { id: 1, src: 'https://inigambarku.site/images/2026/01/20/GIFMERIAH4D965a1f7cfb6a4aac.gif', link: '#' },
+//   { id: 2, src: 'https://inigambarku.site/images/2026/02/01/promo-penaslot.gif', link: '#' },
+//   { id: 3, src: 'https://inigambarku.site/images/2026/01/20/promo-pesiarbet.gif', link: '#' },
+//   { id: 4, src: 'https://inigambarku.site/images/2026/01/20/promo-girang4d.gif', link: '#' },
+// ];
 
 // Status helpers
 function isLiveStatus(status) {
@@ -381,7 +381,7 @@ export default function FootballPlayerClient({ fixtureId }) {
       <div className="container max-w-6xl mx-auto px-4 py-4 sm:py-6">
 
         {/* BANNERS */}
-        <div className="mb-4 space-y-2">
+        {/* <div className="mb-4 space-y-2">
           {BANNERS.map((banner) => (
             <div key={banner.id} className="banner-slot">
               <a href={banner.link} target="_blank" rel="noopener">
@@ -389,7 +389,7 @@ export default function FootballPlayerClient({ fixtureId }) {
               </a>
             </div>
           ))}
-        </div>
+        </div> */}
 
         {/* PLAYER SECTION */}
         <div ref={playerContainerRef} className="relative mb-4">

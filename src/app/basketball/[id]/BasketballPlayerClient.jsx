@@ -21,12 +21,12 @@ const getProxyStreamUrl = (provider, streamId) => {
     return null;
 };
 
-const BANNERS = [
-    { id: 1, src: 'https://inigambarku.site/images/2026/01/20/GIFMERIAH4D965a1f7cfb6a4aac.gif', link: '#' },
-    { id: 2, src: 'https://inigambarku.site/images/2026/02/01/promo-penaslot.gif', link: '#' },
-    { id: 3, src: 'https://inigambarku.site/images/2026/01/20/promo-pesiarbet.gif', link: '#' },
-    { id: 4, src: 'https://inigambarku.site/images/2026/01/20/promo-girang4d.gif', link: '#' },
-];
+// const BANNERS = [
+//     { id: 1, src: 'https://inigambarku.site/images/2026/01/20/GIFMERIAH4D965a1f7cfb6a4aac.gif', link: '#' },
+//     { id: 2, src: 'https://inigambarku.site/images/2026/02/01/promo-penaslot.gif', link: '#' },
+//     { id: 3, src: 'https://inigambarku.site/images/2026/01/20/promo-pesiarbet.gif', link: '#' },
+//     { id: 4, src: 'https://inigambarku.site/images/2026/01/20/promo-girang4d.gif', link: '#' },
+// ];
 
 // Parse channel name to get clean match title
 const parseChannelName = (name) => {
@@ -355,7 +355,7 @@ export default function BasketballPlayerClient({ streamId }) {
 
             <div className="container max-w-6xl mx-auto px-3 sm:px-4 py-4 sm:py-6">
 
-                <div className="mb-4 space-y-2">
+                {/* <div className="mb-4 space-y-2">
                     {BANNERS.map((banner) => (
                         <div key={banner.id} className="banner-slot">
                             <a href={banner.link} target="_blank" rel="noopener">
@@ -363,7 +363,7 @@ export default function BasketballPlayerClient({ streamId }) {
                             </a>
                         </div>
                     ))}
-                </div>
+                </div> */}
 
                 {/* ===== VIDEO PLAYER SECTION - ALWAYS FIRST ON MOBILE ===== */}
                 <div className="relative mb-4">
@@ -427,8 +427,8 @@ export default function BasketballPlayerClient({ streamId }) {
                                         }}
                                         disabled={!streamUrl}
                                         className={`font-bold py-3 px-6 sm:px-8 rounded-full text-base sm:text-lg shadow-lg transition-all transform flex items-center gap-2 ${streamUrl
-                                                ? 'bg-orange-600 hover:bg-orange-700 text-white hover:scale-105 active:scale-95'
-                                                : 'bg-gray-700 text-gray-400 cursor-wait'
+                                            ? 'bg-orange-600 hover:bg-orange-700 text-white hover:scale-105 active:scale-95'
+                                            : 'bg-gray-700 text-gray-400 cursor-wait'
                                             }`}>
                                         <MdPlayArrow className="text-xl sm:text-2xl" />
                                         {streamUrl ? 'Mulai Nonton' : 'Mempersiapkan...'}

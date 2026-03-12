@@ -119,13 +119,13 @@ const LIGA_LIST = [
     { name: 'Liga 1 Indonesia', logo: 'https://media.api-sports.io/football/leagues/274.png', slug: 'football' },
 ];
 
-// Banner images
-const BANNERS = [
-    { id: 1, src: 'https://inigambarku.site/images/2026/01/20/GIFMERIAH4D965a1f7cfb6a4aac.gif', link: '#' },
-    { id: 2, src: 'https://inigambarku.site/images/2026/02/01/promo-penaslot.gif', link: '#' },
-    { id: 3, src: 'https://inigambarku.site/images/2026/01/20/promo-pesiarbet.gif', link: '#' },
-    { id: 4, src: 'https://inigambarku.site/images/2026/01/20/promo-girang4d.gif', link: '#' },
-];
+// // Banner images
+// const BANNERS = [
+//     { id: 1, src: 'https://inigambarku.site/images/2026/01/20/GIFMERIAH4D965a1f7cfb6a4aac.gif', link: '#' },
+//     { id: 2, src: 'https://inigambarku.site/images/2026/02/01/promo-penaslot.gif', link: '#' },
+//     { id: 3, src: 'https://inigambarku.site/images/2026/01/20/promo-pesiarbet.gif', link: '#' },
+//     { id: 4, src: 'https://inigambarku.site/images/2026/01/20/promo-girang4d.gif', link: '#' },
+// ];
 
 // ========== FORMAT TIME ==========
 function formatKickoffTime(dateString) {
@@ -208,7 +208,7 @@ export default function Home() {
             <div className="container max-w-7xl mx-auto px-4 py-6">
 
                 {/* ========== BANNER SECTION ========== */}
-                <div className="mb-6 space-y-2">
+                {/* <div className="mb-6 space-y-2">
                     {BANNERS.map((banner) => (
                         <div key={banner.id} className="banner-slot">
                             <a href={banner.link} target="_blank" rel="noopener">
@@ -221,7 +221,7 @@ export default function Home() {
                             </a>
                         </div>
                     ))}
-                </div>
+                </div> */}
 
                 {/* ========== MAIN LAYOUT 2 KOLOM ========== */}
                 <div className="flex flex-col lg:flex-row gap-6">

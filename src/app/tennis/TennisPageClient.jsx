@@ -12,11 +12,11 @@ import { IoHome, IoCalendar } from 'react-icons/io5';
 const API_URL = 'https://sportmeriah-backend-production.up.railway.app';
 
 // Banner images
-const BANNERS = [
-    { id: 1, src: 'https://inigambarku.site/images/2026/01/20/GIFMERIAH4D965a1f7cfb6a4aac.gif', link: '#' },
-    { id: 2, src: 'https://inigambarku.site/images/2026/01/20/promo-pesiarbet.gif', link: '#' },
-    { id: 3, src: 'https://inigambarku.site/images/2026/01/20/promo-girang4d.gif', link: '#' },
-];
+// const BANNERS = [
+//     { id: 1, src: 'https://inigambarku.site/images/2026/01/20/GIFMERIAH4D965a1f7cfb6a4aac.gif', link: '#' },
+//     { id: 2, src: 'https://inigambarku.site/images/2026/01/20/promo-pesiarbet.gif', link: '#' },
+//     { id: 3, src: 'https://inigambarku.site/images/2026/01/20/promo-girang4d.gif', link: '#' },
+// ];
 
 // ========== STATUS HELPERS ==========
 function isLiveStatus(match) {
@@ -88,7 +88,7 @@ export default function TennisPageClient() {
             <div className="container max-w-7xl mx-auto px-4 py-6">
 
                 {/* ========== BANNER SECTION ========== */}
-                <div className="mb-6 space-y-2">
+                {/* <div className="mb-6 space-y-2">
                     {BANNERS.map((banner) => (
                         <div key={banner.id} className="banner-slot">
                             <a href={banner.link} target="_blank" rel="noopener">
@@ -101,7 +101,7 @@ export default function TennisPageClient() {
                             </a>
                         </div>
                     ))}
-                </div>
+                </div> */}
 
                 {/* ========== PAGE HEADER ========== */}
                 <div className="flex items-center gap-3 mb-6">
