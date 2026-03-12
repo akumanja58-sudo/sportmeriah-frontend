@@ -27,7 +27,7 @@ export async function generateMetadata({ params, searchParams }) {
                     openGraph: {
                         title: `🔴 LIVE: ${matchTitle} - ${league}`,
                         description: `Nonton live streaming ${matchTitle} gratis!`,
-                        url: `https://www.sportmeriah.com/match/${fixtureId}`,
+                        url: `https://www.nobarmeriah.com/match/${fixtureId}`,
                         siteName: 'SportMeriah',
                         images: [
                             {
@@ -46,7 +46,7 @@ export async function generateMetadata({ params, searchParams }) {
                         description: `Nonton live streaming ${matchTitle} gratis!`,
                     },
                     alternates: {
-                        canonical: `https://www.sportmeriah.com/match/${fixtureId}`,
+                        canonical: `https://www.nobarmeriah.com/match/${fixtureId}`,
                     },
                 };
             }

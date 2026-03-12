@@ -5,12 +5,12 @@ import Script from 'next/script';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata = {
-    metadataBase: new URL('https://www.sportmeriah.com'),
+    metadataBase: new URL('https://www.nobarmeriah.com'),
     title: {
-        default: 'SportMeriah - Nonton Streaming Bola & Olahraga Gratis',
-        template: '%s | SportMeriah'
+        default: 'NobarMeriah: Nonton Bola Live Streaming & Jadwal Siaran Langsung',
+        template: '%s | NobarMeriah'
     },
-    description: 'Nonton live streaming bola dan olahraga gratis di SportMeriah. Premier League, La Liga, Serie A, Champions League, NBA Basketball, dan liga top dunia lainnya. Kualitas HD, tanpa buffering!',
+    description: 'Nonton live streaming bola dan olahraga gratis di NobarMeriah. Premier League, La Liga, Serie A, Champions League, NBA Basketball, dan liga top dunia lainnya. Kualitas HD, tanpa buffering!',
     keywords: [
         'streaming bola gratis',
         'nonton bola online',
@@ -24,15 +24,15 @@ export const metadata = {
         'nonton basketball online',
         'live streaming NBA',
         'streaming olahraga gratis',
-        'sportmeriah',
+        'NobarMeriah',
         'nonton bola hd',
         'live score',
         'jadwal bola hari ini',
         'jadwal NBA hari ini'
     ],
-    authors: [{ name: 'SportMeriah' }],
-    creator: 'SportMeriah',
-    publisher: 'SportMeriah',
+    authors: [{ name: 'NobarMeriah' }],
+    creator: 'NobarMeriah',
+    publisher: 'NobarMeriah',
     robots: {
         index: true,
         follow: true,
@@ -47,26 +47,26 @@ export const metadata = {
     openGraph: {
         type: 'website',
         locale: 'id_ID',
-        url: 'https://www.sportmeriah.com',
-        siteName: 'SportMeriah',
-        title: 'SportMeriah - Nonton Streaming Bola & Olahraga Gratis',
+        url: 'https://www.nobarmeriah.com',
+        siteName: 'NobarMeriah',
+        title: 'NobarMeriah: Nonton Bola Live Streaming & Jadwal Siaran Langsung',
         description: 'Nonton live streaming bola dan olahraga gratis. Premier League, La Liga, Serie A, Champions League, NBA Basketball. Kualitas HD!',
         images: [
             {
                 url: '/og-image.png',
                 width: 1200,
                 height: 630,
-                alt: 'SportMeriah - Streaming Bola & NBA Gratis',
+                alt: 'NobarMeriah - Streaming Bola & NBA Gratis',
             },
         ],
     },
     twitter: {
         card: 'summary_large_image',
-        title: 'SportMeriah - Nonton Streaming Bola & Olahraga Gratis',
+        title: 'NobarMeriah: Nonton Bola Live Streaming & Jadwal Siaran Langsung',
         description: 'Nonton live streaming bola dan olahraga gratis. Premier League, Champions League, NBA Basketball. Kualitas HD!',
         images: ['/og-image.png'],
-        creator: '@sportmeriah',
-        site: '@sportmeriah',
+        creator: '@NobarMeriah',
+        site: '@NobarMeriah',
     },
     verification: {
         google: 'google-site-verification-code', // Ganti dengan code dari Google Search Console
@@ -74,27 +74,27 @@ export const metadata = {
         // bing: 'bing-verification-code',
     },
     alternates: {
-        canonical: 'https://www.sportmeriah.com',
+        canonical: 'https://www.nobarmeriah.com',
         languages: {
-            'id-ID': 'https://www.sportmeriah.com',
+            'id-ID': 'https://www.nobarmeriah.com',
         },
     },
     icons: {
-        icon: '/sportmeriah-icon.ico',
-        shortcut: '/sportmeriah-icon.ico',
-        apple: '/sportmeriah-icon.ico',
+        icon: '/NobarMeriah-icon.ico',
+        shortcut: '/NobarMeriah-icon.ico',
+        apple: '/NobarMeriah-icon.ico',
         other: [
             {
                 rel: 'icon',
                 type: 'image/png',
                 sizes: '32x32',
-                url: '/sportmeriah-icon.ico',
+                url: '/NobarMeriah-icon.ico',
             },
             {
                 rel: 'icon',
                 type: 'image/png',
                 sizes: '16x16',
-                url: '/sportmeriah-icon.ico',
+                url: '/NobarMeriah-icon.ico',
             },
         ],
     },
@@ -115,19 +115,19 @@ const jsonLd = {
     '@graph': [
         {
             '@type': 'WebSite',
-            '@id': 'https://www.sportmeriah.com/#website',
-            'url': 'https://www.sportmeriah.com',
-            'name': 'SportMeriah',
+            '@id': 'https://www.nobarmeriah.com/#website',
+            'url': 'https://www.nobarmeriah.com',
+            'name': 'NobarMeriah',
             'description': 'Nonton live streaming bola dan olahraga gratis. Premier League, La Liga, Serie A, Champions League, NBA Basketball.',
             'publisher': {
-                '@id': 'https://www.sportmeriah.com/#organization'
+                '@id': 'https://www.nobarmeriah.com/#organization'
             },
             'potentialAction': [
                 {
                     '@type': 'SearchAction',
                     'target': {
                         '@type': 'EntryPoint',
-                        'urlTemplate': 'https://www.sportmeriah.com/search?q={search_term_string}'
+                        'urlTemplate': 'https://www.nobarmeriah.com/search?q={search_term_string}'
                     },
                     'query-input': 'required name=search_term_string'
                 }
@@ -136,25 +136,25 @@ const jsonLd = {
         },
         {
             '@type': 'Organization',
-            '@id': 'https://www.sportmeriah.com/#organization',
-            'name': 'SportMeriah',
-            'url': 'https://www.sportmeriah.com',
+            '@id': 'https://www.nobarmeriah.com/#organization',
+            'name': 'NobarMeriah',
+            'url': 'https://www.nobarmeriah.com',
             'logo': {
                 '@type': 'ImageObject',
-                'url': 'https://www.sportmeriah.com/logo.png',
+                'url': 'https://www.nobarmeriah.com/logo.png',
                 'width': 512,
                 'height': 512
             },
             'sameAs': [
-                'https://t.me/sportmeriah',
-                'https://twitter.com/sportmeriah'
+                'https://t.me/NobarMeriah',
+                'https://twitter.com/NobarMeriah'
             ]
         },
         {
             '@type': 'SportsOrganization',
-            '@id': 'https://www.sportmeriah.com/#sportsorg',
-            'name': 'SportMeriah',
-            'url': 'https://www.sportmeriah.com',
+            '@id': 'https://www.nobarmeriah.com/#sportsorg',
+            'name': 'NobarMeriah',
+            'url': 'https://www.nobarmeriah.com',
             'sport': ['Soccer', 'Basketball', 'Tennis', 'Motorsport']
         }
     ]
@@ -164,8 +164,8 @@ export default function RootLayout({ children }) {
     return (
         <html lang="id">
             <head>
-                <link rel="icon" href="/sportmeriah-icon.ico" sizes="any" />
-                <link rel="apple-touch-icon" href="/sportmeriah-icon.ico" />
+                <link rel="icon" href="/icon-nobarmeriah.png" sizes="any" />
+                <link rel="apple-touch-icon" href="/icon-nobarmeriah.png" />
                 <link rel="preconnect" href="https://sportmeriah-backend-production.up.railway.app" />
                 <link rel="dns-prefetch" href="https://sportmeriah-backend-production.up.railway.app" />
                 <link rel="preconnect" href="https://media.api-sports.io" />

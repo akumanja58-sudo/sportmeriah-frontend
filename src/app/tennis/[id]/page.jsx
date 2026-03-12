@@ -29,7 +29,7 @@ export async function generateMetadata({ params }) {
                     openGraph: {
                         title: `🎾 LIVE: ${matchTitle} - ${tournament}`,
                         description: `Nonton live streaming Tennis ${matchTitle} gratis!`,
-                        url: `https://www.sportmeriah.com/tennis/${matchId}`,
+                        url: `https://www.nobarmeriah.com/tennis/${matchId}`,
                         siteName: 'SportMeriah',
                         images: [
                             {
@@ -48,7 +48,7 @@ export async function generateMetadata({ params }) {
                         description: `Nonton live streaming Tennis ${matchTitle} gratis!`,
                     },
                     alternates: {
-                        canonical: `https://www.sportmeriah.com/tennis/${matchId}`,
+                        canonical: `https://www.nobarmeriah.com/tennis/${matchId}`,
                     },
                 };
             }

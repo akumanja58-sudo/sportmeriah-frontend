@@ -3,7 +3,7 @@ User-agent: *
 Allow: /
 
 # Sitemaps
-Sitemap: https://www.sportmeriah.com/sitemap.xml
+Sitemap: https://www.nobarmeriah.com/sitemap.xml
 
 # Disallow admin/api routes
 Disallow: /api/

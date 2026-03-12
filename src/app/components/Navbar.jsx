@@ -75,8 +75,8 @@ export default function Navbar() {
                         {/* Logo */}
                         <Link href="/" className="flex items-center gap-2">
                             <img
-                                src="https://inigambarku.site/images/2026/01/20/4984651061651065165566.png"
-                                alt="SportMeriah"
+                                src="https://i.gyazo.com/712643ab3b631188e6c4ac1b1227a898.png"
+                                alt="NobarMeriah"
                                 className="h-14"
                             />
                         </Link>

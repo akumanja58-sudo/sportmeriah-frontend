@@ -443,10 +443,10 @@ export default function Home() {
                         {/* ========== SEO DESCRIPTION ========== */}
                         <div className="mt-8 pt-6 border-t border-gray-700 text-gray-400 text-sm space-y-3">
                             <h2 className="text-xl font-semibold text-white">
-                                Nonton Streaming Sport Gratis di SportMeriah
+                                Nonton Streaming Sport Gratis di NobarMeriah
                             </h2>
                             <p>
-                                Nonton streaming Sport gratis di SportMeriah. Kualitas terbaik, server tercepat, dan update real-time.
+                                Nonton streaming Sport gratis di NobarMeriah. Kualitas terbaik, server tercepat, dan update real-time.
                             </p>
                             <p>
                                 Tersedia berbagai pertandingan dari liga top dunia termasuk sepakbola, basketball NBA, tennis, dan olahraga lainnya. Tonton sekarang tanpa ribet!

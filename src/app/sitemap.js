@@ -4,8 +4,8 @@
 const API_URL = 'https://sportmeriah-backend-production.up.railway.app';
 
 export default async function sitemap() {
-    const baseUrl = 'https://www.sportmeriah.com';
-    
+    const baseUrl = 'https://www.nobarmeriah.com/';
+
     // Static pages
     const staticPages = [
         {
@@ -27,7 +27,7 @@ export default async function sitemap() {
             priority: 0.9,
         },
     ];
-    
+
     // Dynamic pages - Football matches
     let footballMatches = [];
     try {
@@ -35,7 +35,7 @@ export default async function sitemap() {
             next: { revalidate: 3600 } // Cache for 1 hour
         });
         const footballData = await footballRes.json();
-        
+
         if (footballData.success && footballData.fixtures) {
             footballMatches = footballData.fixtures.map((fixture) => ({
                 url: `${baseUrl}/match/${fixture.id}`,
@@ -47,7 +47,7 @@ export default async function sitemap() {
     } catch (error) {
         console.error('Error fetching football for sitemap:', error);
     }
-    
+
     // Dynamic pages - Basketball matches
     let basketballMatches = [];
     try {
@@ -55,7 +55,7 @@ export default async function sitemap() {
             next: { revalidate: 3600 }
         });
         const basketballData = await basketballRes.json();
-        
+
         if (basketballData.success && basketballData.matches) {
             basketballMatches = basketballData.matches.map((match) => ({
                 url: `${baseUrl}/basketball/${match.id}`,
@@ -67,6 +67,6 @@ export default async function sitemap() {
     } catch (error) {
         console.error('Error fetching basketball for sitemap:', error);
     }
-    
+
     return [...staticPages, ...footballMatches, ...basketballMatches];
 }

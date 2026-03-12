@@ -20,7 +20,7 @@ export const metadata = {
     openGraph: {
         title: '🏀 Live Streaming NBA Basketball - SportMeriah',
         description: 'Nonton live streaming NBA Basketball gratis!',
-        url: 'https://www.sportmeriah.com/basketball',
+        url: 'https://www.nobarmeriah.com/basketball',
         siteName: 'SportMeriah',
         images: [
             {
@@ -40,7 +40,7 @@ export const metadata = {
         images: ['/og-image.png'],
     },
     alternates: {
-        canonical: 'https://www.sportmeriah.com/basketball',
+        canonical: 'https://www.nobarmeriah.com/basketball',
     },
 };
 

@@ -22,7 +22,7 @@ export const metadata = {
     openGraph: {
         title: '🎾 Live Streaming Tennis - SportMeriah',
         description: 'Nonton live streaming Tennis gratis!',
-        url: 'https://www.sportmeriah.com/tennis',
+        url: 'https://www.nobarmeriah.com/tennis',
         siteName: 'SportMeriah',
         images: [
             {
@@ -42,7 +42,7 @@ export const metadata = {
         images: ['/og-image.png'],
     },
     alternates: {
-        canonical: 'https://www.sportmeriah.com/tennis',
+        canonical: 'https://www.nobarmeriah.com/tennis',
     },
 };
 

@@ -23,7 +23,7 @@ export default function robots() {
                 allow: '/',
             },
         ],
-        sitemap: 'https://www.sportmeriah.com/sitemap.xml',
-        host: 'https://www.sportmeriah.com',
+        sitemap: 'https://www.nobarmeriah.com/sitemap.xml',
+        host: 'https://www.nobarmeriah.com',
     };
 }
