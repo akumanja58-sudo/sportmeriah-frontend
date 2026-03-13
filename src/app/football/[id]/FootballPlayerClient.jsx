@@ -12,7 +12,7 @@ import { IoHome } from 'react-icons/io5';
 import { MdSportsSoccer, MdSportsBasketball, MdPlayArrow, MdRefresh, MdShare, MdFullscreen, MdVolumeUp, MdVolumeOff } from 'react-icons/md';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://sportmeriah-backend-production.up.railway.app';
-const VPS_IP = '173.249.27.15';
+const STREAM_BASE = 'https://stream.nobarmeriah.com';
 
 // Banner images
 // const BANNERS = [
@@ -141,10 +141,10 @@ export default function FootballPlayerClient({ fixtureId }) {
       let hlsUrl;
       if (provider === 'pearl') {
         await fetch(`${API_URL}/api/streams/pearl/start/${streamId}`);
-        hlsUrl = `https://stream.sportmeriah.com/hls/pearl_${streamId}.m3u8`;
+        hlsUrl = `${STREAM_BASE}/hls/pearl_${streamId}.m3u8`;
       } else {
-        await fetch(`${API_URL}/api/streams/start/${streamId}`);
-        hlsUrl = `${API_URL}/api/stream/${streamId}.m3u8`;
+        await fetch(`${API_URL}/api/streams/sphere/start/${streamId}`);
+        hlsUrl = `${STREAM_BASE}/hls/sphere_${streamId}.m3u8`;
       }
 
       // Wait for stream to be ready
