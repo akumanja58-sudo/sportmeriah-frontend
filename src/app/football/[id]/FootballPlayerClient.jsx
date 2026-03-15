@@ -48,6 +48,9 @@ export default function FootballPlayerClient({ fixtureId }) {
   const [streamUrl, setStreamUrl] = useState(null);
   const [streamLoading, setStreamLoading] = useState(false);
   const [countdown, setCountdown] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+  const [altStream, setAltStream] = useState(null);
+  const [currentStreamId, setCurrentStreamId] = useState(null);
+  const [currentProvider, setCurrentProvider] = useState(null);
 
   const videoRef = useRef(null);
   const hlsRef = useRef(null);
@@ -73,16 +76,22 @@ export default function FootballPlayerClient({ fixtureId }) {
       if (data.success && data.fixture) {
         setFixture(data.fixture);
 
+        // Save alt stream if available
+        if (data.fixture.altStream) {
+          setAltStream(data.fixture.altStream);
+        }
+
         // Check status and auto-start if LIVE
         const status = data.fixture.status?.short || 'NS';
         if (isLiveStatus(status)) {
           const sid = streamIdFromUrl || data.fixture.stream?.stream_id;
           const prov = data.fixture.stream?.provider || providerFromUrl;
           if (sid) {
+            setCurrentStreamId(sid);
+            setCurrentProvider(prov);
             setTimeout(() => startStream(sid, prov), 500);
           }
         } else if (!isFinishedStatus(status)) {
-          // Upcoming - start countdown
           startCountdown(new Date(data.fixture.date).getTime());
         }
       } else {
@@ -267,6 +276,24 @@ export default function FootballPlayerClient({ fixtureId }) {
     }
   };
 
+  const switchServer = () => {
+    if (!altStream) return;
+
+    // Swap current and alt
+    const oldStreamId = currentStreamId;
+    const oldProvider = currentProvider;
+
+    setCurrentStreamId(altStream.id);
+    setCurrentProvider(altStream.provider);
+    setAltStream({ id: oldStreamId, name: '', category: '', provider: oldProvider });
+
+    // Stop current and start new
+    if (hlsRef.current) hlsRef.current.destroy();
+    setStreamUrl(null);
+    setIsPlaying(false);
+    startStream(altStream.id, altStream.provider);
+  };
+
   const copyLink = () => {
     navigator.clipboard.writeText(window.location.href);
     setCopied(true);
@@ -412,6 +439,11 @@ export default function FootballPlayerClient({ fixtureId }) {
                   <button onClick={refreshStream} className="p-1.5 hover:bg-red-700 rounded transition">
                     <MdRefresh size={18} />
                   </button>
+                  {altStream && (
+                    <button onClick={switchServer} className="px-2 py-1 hover:bg-red-700 rounded transition text-[10px] font-bold flex items-center gap-1" title={`Ganti ke ${altStream.provider === 'sphere' ? 'Server 2' : 'Server 1'}`}>
+                      🔄 Ganti Server
+                    </button>
+                  )}
                   <button onClick={toggleFullscreen} className="p-1.5 hover:bg-red-700 rounded transition">
                     <MdFullscreen size={18} />
                   </button>
