@@ -84,7 +84,7 @@ export default function FootballPlayerClient({ fixtureId }) {
         // Check status and auto-start if LIVE
         const status = data.fixture.status?.short || 'NS';
         if (isLiveStatus(status)) {
-          const sid = streamIdFromUrl || data.fixture.stream?.stream_id;
+          const sid = data.fixture.stream?.stream_id || streamIdFromUrl;
           const prov = data.fixture.stream?.provider || providerFromUrl;
           if (sid) {
             setCurrentStreamId(sid);
