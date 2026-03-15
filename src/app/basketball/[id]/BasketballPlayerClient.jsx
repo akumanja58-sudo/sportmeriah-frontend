@@ -118,8 +118,15 @@ export default function BasketballPlayerClient({ streamId }) {
                 if (data.stream?.provider === 'pearl') {
                     await startPearlStream(streamId);
                 } else {
-                    // For Sphere, use direct stream URL
-                    setStreamUrl(data.stream?.url);
+                    // For Sphere, start VPS stream first then set URL
+                    console.log('Starting Sphere stream via VPS...');
+                    const startRes = await fetch(`${API_URL}/api/streams/sphere/start/${streamId}`);
+                    const startData = await startRes.json();
+                    console.log('VPS Sphere response:', startData);
+
+                    const waitTime = startData.message?.includes('already running') ? 1000 : 8000;
+                    await new Promise(resolve => setTimeout(resolve, waitTime));
+                    setStreamUrl(`https://stream.nobarmeriah.com/hls/sphere_${streamId}.m3u8`);
                 }
             } else {
                 setError('Stream tidak ditemukan');
