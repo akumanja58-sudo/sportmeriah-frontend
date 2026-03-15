@@ -85,7 +85,7 @@ export default function FootballPlayerClient({ fixtureId }) {
         const status = data.fixture.status?.short || 'NS';
         if (isLiveStatus(status)) {
           const sid = streamIdFromUrl || data.fixture.stream?.stream_id;
-          const prov = streamIdFromUrl ? providerFromUrl : (data.fixture.stream?.provider || providerFromUrl);
+          const prov = data.fixture.stream?.provider || providerFromUrl;
           if (sid) {
             setCurrentStreamId(sid);
             setCurrentProvider(prov);
