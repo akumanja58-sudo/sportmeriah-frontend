@@ -7,6 +7,7 @@ export async function generateMetadata({ params }) {
     };
 }
 
-export default function MotorsportStreamPage({ params }) {
-    return <MotorsportPlayerClient streamId={params.streamId} />;
+export default async function MotorsportPlayerPage({ params }) {
+    const { streamId } = await params;
+    return <MotorsportPlayerClient streamId={streamId} />;
 }
