@@ -46,6 +46,7 @@ export default function FootballPlayerClient({ fixtureId }) {
   const [isMuted, setIsMuted] = useState(false);
   const [copied, setCopied] = useState(false);
   const [streamUrl, setStreamUrl] = useState(null);
+  const [altStream, setAltStream] = useState(null);
   const [streamLoading, setStreamLoading] = useState(false);
   const [countdown, setCountdown] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
 
@@ -72,6 +73,7 @@ export default function FootballPlayerClient({ fixtureId }) {
 
       if (data.success && data.fixture) {
         setFixture(data.fixture);
+        setAltStream(data.fixture.altStream || null);
 
         // Check status and auto-start if LIVE
         const status = data.fixture.status?.short || 'NS';
@@ -267,6 +269,11 @@ export default function FootballPlayerClient({ fixtureId }) {
     }
   };
 
+  const switchServer = () => {
+    if (!altStream) return;
+    startStream(altStream.stream_id, altStream.provider);
+  };
+
   const copyLink = () => {
     navigator.clipboard.writeText(window.location.href);
     setCopied(true);
@@ -412,6 +419,11 @@ export default function FootballPlayerClient({ fixtureId }) {
                   <button onClick={refreshStream} className="p-1.5 hover:bg-red-700 rounded transition">
                     <MdRefresh size={18} />
                   </button>
+                  {altStream && (
+                    <button onClick={switchServer} className="px-2 py-1 hover:bg-red-700 rounded transition text-[10px] font-bold" title={`Ganti ke ${altStream.provider === 'sphere' ? 'Server 2' : 'Server 1'}`}>
+                      🔄 Server 2
+                    </button>
+                  )}
                   <button onClick={toggleFullscreen} className="p-1.5 hover:bg-red-700 rounded transition">
                     <MdFullscreen size={18} />
                   </button>
