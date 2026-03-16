@@ -31,7 +31,7 @@ const NAV_CATEGORIES = [
     { id: 'basketball', name: 'Basket', icon: MdSportsBasketball, color: '#f97316' },
     { id: 'tennis', name: 'Tenis', icon: MdSportsTennis, color: '#eab308' },
     { id: 'badminton', name: 'Bulu Tangkis', icon: GiShuttlecock, color: '#3b82f6' },
-    { id: 'motorsport', name: 'MotoGP', icon: MdSportsMotorsports, color: '#ef4444' },
+    { id: 'motorsport', name: 'Motorsport', icon: MdSportsMotorsports, color: '#ef4444' },
 ];
 
 // Semua kategori untuk dropdown
