@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Navbar from '../../components/Navbar';
-import Hls from 'hls.js';
+import VideoPlayer from '../../components/VideoPlayer';
 
 import { FaTelegram, FaWhatsapp, FaFacebook, FaTwitter, FaCopy, FaCheck } from 'react-icons/fa';
 import { IoHome } from 'react-icons/io5';
@@ -76,15 +76,12 @@ export default function BasketballPlayerClient({ streamId }) {
     const [matchStatus, setMatchStatus] = useState('live'); // Default to live for channels
     const [streamUrl, setStreamUrl] = useState(null);
 
-    const videoRef = useRef(null);
-    const hlsRef = useRef(null);
     const countdownRef = useRef(null);
 
     useEffect(() => {
         fetchStreamInfo();
         fetchRelatedMatches();
         return () => {
-            if (hlsRef.current) hlsRef.current.destroy();
             if (countdownRef.current) clearInterval(countdownRef.current);
         };
     }, [streamId, provider]);
@@ -211,74 +208,12 @@ export default function BasketballPlayerClient({ streamId }) {
         countdownRef.current = setInterval(updateCountdown, 1000);
     };
 
-    const startStream = useCallback(() => {
-        if (!streamUrl || !videoRef.current) return;
-
-        if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; }
-
-        if (Hls.isSupported()) {
-            const hls = new Hls({
-                enableWorker: true,
-                lowLatencyMode: false,
-                backBufferLength: 90,
-                maxBufferLength: 60,
-                maxMaxBufferLength: 120,
-                maxBufferSize: 60 * 1000 * 1000,
-                maxBufferHole: 1.0,
-                liveSyncDurationCount: 4,
-                liveMaxLatencyDurationCount: 8,
-                liveDurationInfinity: true,
-                manifestLoadingMaxRetry: 10,
-                manifestLoadingRetryDelay: 1000,
-                levelLoadingMaxRetry: 10,
-                levelLoadingRetryDelay: 1000,
-                fragLoadingMaxRetry: 10,
-                fragLoadingRetryDelay: 1000,
-                startPosition: -1,
-            });
-            hls.loadSource(streamUrl);
-            hls.attachMedia(videoRef.current);
-            hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                videoRef.current.play().then(() => setIsPlaying(true)).catch(() => { });
-            });
-            hls.on(Hls.Events.ERROR, (event, data) => {
-                if (data.fatal) {
-                    if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
-                        console.log('Network error, retrying...');
-                        setTimeout(() => hls.startLoad(), 2000);
-                    } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
-                        hls.recoverMediaError();
-                    } else {
-                        setError('Stream error. Silakan refresh.');
-                    }
-                }
-            });
-            hlsRef.current = hls;
-        } else if (videoRef.current.canPlayType('application/vnd.apple.mpegurl')) {
-            videoRef.current.src = streamUrl;
-            videoRef.current.addEventListener('loadedmetadata', () => {
-                videoRef.current.play().then(() => setIsPlaying(true)).catch(() => { });
-            });
-        }
-    }, [streamUrl]);
-
     const refreshStream = () => {
         setIsPlaying(false);
-        setError(null);
-        if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; }
-
-        // Re-fetch stream for Pearl provider
-        if (provider === 'pearl') {
-            startPearlStream(streamId).then(() => {
-                setTimeout(() => startStream(), 1000);
-            });
-        } else {
-            setTimeout(() => startStream(), 500);
-        }
+        setStreamUrl(null);
+        fetchStreamInfo();
     };
 
-    const toggleMute = () => { if (videoRef.current) { videoRef.current.muted = !videoRef.current.muted; setIsMuted(!isMuted); } };
-    const toggleFullscreen = () => { if (videoRef.current) { document.fullscreenElement ? document.exitFullscreen() : videoRef.current.requestFullscreen(); } };
     const copyLink = () => { navigator.clipboard.writeText(window.location.href); setCopied(true); setTimeout(() => setCopied(false), 2000); };
 
     const formatMatchDate = (dateStr) => {
@@ -372,116 +307,59 @@ export default function BasketballPlayerClient({ streamId }) {
                     ))}
                 </div> */}
 
-                {/* ===== VIDEO PLAYER SECTION - ALWAYS FIRST ON MOBILE ===== */}
+                {/* ===== VIDEO PLAYER SECTION ===== */}
                 <div className="relative mb-4">
-                    <div className="bg-black rounded-lg aspect-video w-full overflow-hidden shadow-2xl relative">
-                        <video ref={videoRef} className="w-full h-full" controls={isPlaying} playsInline />
-
-                        {/* Pre-game Overlay */}
-                        {!isPlaying && (
-                            <div className="absolute inset-0 bg-gradient-to-b from-gray-900/95 to-gray-800/95 flex flex-col justify-center items-center text-center p-4 cursor-pointer" onClick={() => matchStatus !== 'finished' && startStream()}>
-
-                                {/* Match Title - CLEAN */}
-                                <h1 className="text-lg sm:text-2xl md:text-3xl font-bold text-white mb-2 px-2">
-                                    {displayTitle}
-                                </h1>
-
-                                {/* League */}
+                    {streamUrl && isPlaying ? (
+                        <VideoPlayer
+                            streamUrl={streamUrl}
+                            title={displayTitle}
+                            isLive={matchStatus === 'live'}
+                            onRefresh={refreshStream}
+                        />
+                    ) : (
+                        <div className="bg-black rounded-lg aspect-video w-full overflow-hidden shadow-2xl relative">
+                            {/* Pre-game Overlay */}
+                            <div className="absolute inset-0 bg-gradient-to-b from-gray-900/95 to-gray-800/95 flex flex-col justify-center items-center text-center p-4">
+                                <h1 className="text-lg sm:text-2xl md:text-3xl font-bold text-white mb-2 px-2">{displayTitle}</h1>
                                 <p className="text-orange-400 text-sm sm:text-base mb-4 flex items-center gap-2">
                                     <MdSportsBasketball /> {displayLeague}
                                 </p>
 
-                                {/* Provider Badge */}
-                                {streamInfo?.provider && (
-                                    <p className="text-xs text-gray-500 mb-2">
-                                        Provider: {streamInfo.provider.toUpperCase()}
-                                    </p>
+                                {matchStatus === 'scheduled' && (
+                                    <>
+                                        <p className="text-gray-400 text-xs sm:text-sm mb-2">{formatMatchDate(matchData?.date)}</p>
+                                        <div className="text-2xl sm:text-4xl font-bold text-white font-mono">
+                                            {countdown.days > 0 && `${countdown.days}d `}
+                                            {String(countdown.hours).padStart(2, '0')}:
+                                            {String(countdown.minutes).padStart(2, '0')}:
+                                            {String(countdown.seconds).padStart(2, '0')}
+                                        </div>
+                                    </>
+                                )}
+                                {matchStatus === 'live' && (
+                                    <div className="flex items-center justify-center gap-2 text-xl sm:text-2xl font-bold text-red-500 mb-4">
+                                        <span className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></span>
+                                        LIVE NOW
+                                    </div>
+                                )}
+                                {matchStatus === 'finished' && (
+                                    <div className="text-xl font-bold text-gray-400 mb-4">Pertandingan Selesai</div>
                                 )}
 
-                                {/* Status */}
-                                <div className="mb-4">
-                                    {matchStatus === 'scheduled' && (
-                                        <>
-                                            <p className="text-gray-400 text-xs sm:text-sm mb-2">{formatMatchDate(matchData?.date)}</p>
-                                            <div className="text-2xl sm:text-4xl font-bold text-white font-mono">
-                                                {countdown.days > 0 && `${countdown.days}d `}
-                                                {String(countdown.hours).padStart(2, '0')}:
-                                                {String(countdown.minutes).padStart(2, '0')}:
-                                                {String(countdown.seconds).padStart(2, '0')}
-                                            </div>
-                                        </>
-                                    )}
-                                    {matchStatus === 'live' && (
-                                        <div className="flex items-center justify-center gap-2 text-xl sm:text-2xl font-bold text-red-500">
-                                            <span className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></span>
-                                            LIVE NOW
-                                        </div>
-                                    )}
-                                    {matchStatus === 'finished' && (
-                                        <div className="text-xl font-bold text-gray-400">Pertandingan Selesai</div>
-                                    )}
-                                </div>
-
-                                {/* Play Button */}
-                                {matchStatus !== 'finished' && (
+                                {matchStatus !== 'finished' ? (
                                     <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            if (streamUrl) {
-                                                startStream();
-                                            }
-                                            // else: still loading, do nothing (button disabled)
-                                        }}
+                                        onClick={() => { if (streamUrl) setIsPlaying(true); }}
                                         disabled={!streamUrl}
-                                        className={`font-bold py-3 px-6 sm:px-8 rounded-full text-base sm:text-lg shadow-lg transition-all transform flex items-center gap-2 ${streamUrl
-                                            ? 'bg-orange-600 hover:bg-orange-700 text-white hover:scale-105 active:scale-95'
-                                            : 'bg-gray-700 text-gray-400 cursor-wait'
-                                            }`}>
+                                        className={`font-bold py-3 px-6 sm:px-8 rounded-full text-base sm:text-lg shadow-lg transition-all transform flex items-center gap-2 ${streamUrl ? 'bg-orange-600 hover:bg-orange-700 text-white hover:scale-105' : 'bg-gray-700 text-gray-400 cursor-wait'}`}
+                                    >
                                         <MdPlayArrow className="text-xl sm:text-2xl" />
                                         {streamUrl ? 'Mulai Nonton' : 'Mempersiapkan...'}
                                     </button>
-                                )}
-                                {matchStatus === 'finished' && (
+                                ) : (
                                     <Link href="/basketball" className="bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 px-6 rounded-full shadow-lg transition-all">
                                         Lihat Pertandingan Lain
                                     </Link>
                                 )}
-                            </div>
-                        )}
-
-                        {/* Error overlay */}
-                        {error && isPlaying && (
-                            <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center">
-                                <p className="text-red-400 mb-4">{error}</p>
-                                <button onClick={refreshStream} className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg flex items-center gap-2">
-                                    <MdRefresh /> Coba Lagi
-                                </button>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Player Controls */}
-                    {isPlaying && (
-                        <div className="flex items-center justify-between mt-2 bg-gray-800 rounded-lg px-3 sm:px-4 py-2">
-                            <div className="flex items-center gap-2 min-w-0 flex-1">
-                                <span className="flex items-center gap-1 text-red-500 text-xs sm:text-sm font-medium flex-shrink-0">
-                                    <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
-                                    LIVE
-                                </span>
-                                <span className="text-gray-400 text-xs sm:text-sm truncate">
-                                    {displayTitle}
-                                </span>
-                            </div>
-                            <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
-                                <button onClick={toggleMute} className="p-1.5 sm:p-2 hover:bg-gray-700 rounded-lg transition text-gray-300">
-                                    {isMuted ? <MdVolumeOff size={18} /> : <MdVolumeUp size={18} />}
-                                </button>
-                                <button onClick={refreshStream} className="p-1.5 sm:p-2 hover:bg-gray-700 rounded-lg transition text-gray-300">
-                                    <MdRefresh size={18} />
-                                </button>
-                                <button onClick={toggleFullscreen} className="p-1.5 sm:p-2 hover:bg-gray-700 rounded-lg transition text-gray-300">
-                                    <MdFullscreen size={18} />
-                                </button>
                             </div>
                         </div>
                     )}

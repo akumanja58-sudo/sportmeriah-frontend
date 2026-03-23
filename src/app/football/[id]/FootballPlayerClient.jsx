@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import Navbar from '../../components/Navbar';
-import Hls from 'hls.js';
+import VideoPlayer from '../../components/VideoPlayer';
 
 // React Icons
 import { FaTelegram, FaWhatsapp, FaFacebook, FaTwitter, FaCopy, FaCheck } from 'react-icons/fa';
@@ -50,16 +50,12 @@ export default function FootballPlayerClient({ fixtureId }) {
   const [streamLoading, setStreamLoading] = useState(false);
   const [countdown, setCountdown] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
 
-  const videoRef = useRef(null);
-  const hlsRef = useRef(null);
   const countdownRef = useRef(null);
-  const playerContainerRef = useRef(null);
 
   useEffect(() => {
     fetchFixtureData();
     fetchRelatedMatches();
     return () => {
-      if (hlsRef.current) hlsRef.current.destroy();
       if (countdownRef.current) clearInterval(countdownRef.current);
     };
   }, [fixtureId]);
@@ -159,105 +155,6 @@ export default function FootballPlayerClient({ fixtureId }) {
       setError('Gagal memulai stream');
     } finally {
       setStreamLoading(false);
-    }
-  };
-
-  const initializePlayer = useCallback((url) => {
-    if (!videoRef.current || !url) return;
-
-    // Destroy existing HLS instance
-    if (hlsRef.current) {
-      hlsRef.current.destroy();
-    }
-
-    if (Hls.isSupported()) {
-      const hls = new Hls({
-        enableWorker: true,
-        lowLatencyMode: false,
-        backBufferLength: 90,
-        maxBufferLength: 60,
-        maxMaxBufferLength: 120,
-        maxBufferSize: 60 * 1000 * 1000,
-        maxBufferHole: 1.0,
-        liveSyncDurationCount: 4,
-        liveMaxLatencyDurationCount: 8,
-        liveDurationInfinity: true,
-        manifestLoadingMaxRetry: 10,
-        manifestLoadingRetryDelay: 1000,
-        levelLoadingMaxRetry: 10,
-        levelLoadingRetryDelay: 1000,
-        fragLoadingMaxRetry: 10,
-        fragLoadingRetryDelay: 1000,
-        startPosition: -1,
-      });
-
-      hls.loadSource(url);
-      hls.attachMedia(videoRef.current);
-
-      hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        videoRef.current.play()
-          .then(() => setIsPlaying(true))
-          .catch(err => console.log('Autoplay blocked:', err));
-      });
-
-      hls.on(Hls.Events.ERROR, (event, data) => {
-        if (data.fatal) {
-          console.error('HLS fatal error:', data);
-          if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
-            hls.startLoad();
-          } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
-            hls.recoverMediaError();
-          } else {
-            hls.destroy();
-            hls.loadSource(url);
-            hls.attachMedia(videoRef.current);
-          }
-        }
-      });
-
-      hlsRef.current = hls;
-    } else if (videoRef.current.canPlayType('application/vnd.apple.mpegurl')) {
-      // Safari native HLS
-      videoRef.current.src = url;
-      videoRef.current.addEventListener('loadedmetadata', () => {
-        videoRef.current.play()
-          .then(() => setIsPlaying(true))
-          .catch(err => console.log('Autoplay blocked:', err));
-      });
-    }
-  }, []);
-
-  // Initialize player when streamUrl changes and video is rendered
-  useEffect(() => {
-    if (streamUrl && isPlaying && videoRef.current) {
-      initializePlayer(streamUrl);
-    }
-  }, [streamUrl, isPlaying, initializePlayer]);
-
-  // ========== PLAYER CONTROLS ==========
-  const togglePlay = () => {
-    if (!videoRef.current) return;
-    if (videoRef.current.paused) {
-      videoRef.current.play();
-      setIsPlaying(true);
-    } else {
-      videoRef.current.pause();
-      setIsPlaying(false);
-    }
-  };
-
-  const toggleMute = () => {
-    if (!videoRef.current) return;
-    videoRef.current.muted = !videoRef.current.muted;
-    setIsMuted(videoRef.current.muted);
-  };
-
-  const toggleFullscreen = () => {
-    if (!playerContainerRef.current) return;
-    if (!document.fullscreenElement) {
-      playerContainerRef.current.requestFullscreen();
-    } else {
-      document.exitFullscreen();
     }
   };
 
@@ -399,46 +296,18 @@ export default function FootballPlayerClient({ fixtureId }) {
         </div> */}
 
         {/* PLAYER SECTION */}
-        <div ref={playerContainerRef} className="relative mb-4">
+        <div className="relative mb-4">
 
           {/* PLAYING STATE */}
           {streamUrl && isPlaying ? (
-            <div className="bg-black rounded-lg overflow-hidden">
-              {/* Player Header */}
-              <div className="bg-red-600 text-white px-3 py-2 flex items-center justify-between">
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="w-2 h-2 bg-white rounded-full animate-pulse flex-shrink-0"></span>
-                  <span className="font-bold text-sm">{isLive ? (fixture?.status?.elapsed ? `${fixture.status.elapsed}'` : 'LIVE') : 'Playing'}</span>
-                  {isLive && <span className="font-bold ml-2">{goals.home ?? 0} - {goals.away ?? 0}</span>}
-                  <span className="text-xs truncate ml-2">{matchTitle}</span>
-                </div>
-                <div className="flex items-center gap-1 flex-shrink-0">
-                  <button onClick={toggleMute} className="p-1.5 hover:bg-red-700 rounded transition">
-                    {isMuted ? <MdVolumeOff size={18} /> : <MdVolumeUp size={18} />}
-                  </button>
-                  <button onClick={refreshStream} className="p-1.5 hover:bg-red-700 rounded transition">
-                    <MdRefresh size={18} />
-                  </button>
-                  {altStream && (
-                    <button onClick={switchServer} className="px-2 py-1 hover:bg-red-700 rounded transition text-[10px] font-bold" title={`Ganti ke ${altStream.provider === 'sphere' ? 'Server 2' : 'Server 1'}`}>
-                      🔄 Server 2
-                    </button>
-                  )}
-                  <button onClick={toggleFullscreen} className="p-1.5 hover:bg-red-700 rounded transition">
-                    <MdFullscreen size={18} />
-                  </button>
-                </div>
-              </div>
-
-              {/* Video Element */}
-              <video
-                ref={videoRef}
-                className="w-full aspect-video bg-black"
-                playsInline
-                controls
-                onClick={togglePlay}
-              />
-            </div>
+            <VideoPlayer
+              streamUrl={streamUrl}
+              title={matchTitle}
+              isLive={isLive}
+              onRefresh={refreshStream}
+              onSwitchServer={altStream ? switchServer : null}
+              altServerLabel={altStream ? 'Server 2' : null}
+            />
           ) : streamLoading ? (
             /* LOADING STREAM */
             <div className="bg-black rounded-lg aspect-video flex items-center justify-center">
