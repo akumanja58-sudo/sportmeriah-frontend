@@ -13,7 +13,7 @@ import {
     MdSportsHandball, MdSportsVolleyball, MdSportsMma, MdSportsTennis,
     MdSportsKabaddi, MdLiveTv, MdPlayCircle
 } from 'react-icons/md';
-import { GiLacrossStick, GiSoccerField } from 'react-icons/gi';
+import { GiSoccerField } from 'react-icons/gi';
 
 const API_URL = 'https://sportmeriah-backend-production.up.railway.app';
 
@@ -166,7 +166,7 @@ const SPORT_CONFIGS = {
         name: 'Lacrosse',
         nameId: 'Lacrosse',
         emoji: '🥍',
-        icon: GiLacrossStick,
+        icon: MdSportsKabaddi,
         color: 'text-teal-400',
         bgColor: 'bg-teal-600',
         hoverColor: 'group-hover:bg-teal-700',
