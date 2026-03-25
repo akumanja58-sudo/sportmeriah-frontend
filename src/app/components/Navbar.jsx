@@ -20,38 +20,43 @@ import {
     MdSchedule,
     MdMoreHoriz
 } from 'react-icons/md';
-import { GiShuttlecock, GiPoolTriangle, GiDart } from 'react-icons/gi';
+import { GiShuttlecock } from 'react-icons/gi';
 import { IoCalendarOutline } from 'react-icons/io5';
 import { BiCategory } from 'react-icons/bi';
 import { FaTrophy } from 'react-icons/fa';
 
 // Kategori untuk navbar dengan react-icons
 const NAV_CATEGORIES = [
-    { id: 'football', name: 'Sepakbola', icon: MdSportsSoccer, color: '#22c55e' },
-    { id: 'basketball', name: 'Basket', icon: MdSportsBasketball, color: '#f97316' },
-    { id: 'tennis', name: 'Tenis', icon: MdSportsTennis, color: '#eab308' },
-    { id: 'badminton', name: 'Bulu Tangkis', icon: GiShuttlecock, color: '#3b82f6' },
-    { id: 'motorsport', name: 'Motorsport', icon: MdSportsMotorsports, color: '#ef4444' },
+    { id: 'football', name: 'Sepakbola', icon: MdSportsSoccer, color: '#22c55e', href: '/football' },
+    { id: 'basketball', name: 'Basket', icon: MdSportsBasketball, color: '#f97316', href: '/basketball' },
+    { id: 'tennis', name: 'Tenis', icon: MdSportsTennis, color: '#eab308', href: '/tennis' },
+    { id: 'badminton', name: 'Bulu Tangkis', icon: GiShuttlecock, color: '#3b82f6', href: '/badminton' },
+    { id: 'motorsport', name: 'Motorsport', icon: MdSportsMotorsports, color: '#ef4444', href: '/motorsport' },
 ];
 
-// Semua kategori untuk dropdown
+// Semua kategori untuk dropdown — grouped by existing pages + /sports/ routes
 const ALL_CATEGORIES = [
-    { id: 'football', name: 'Sepakbola', icon: MdSportsSoccer, color: '#22c55e' },
-    { id: 'basketball', name: 'Basketball', icon: MdSportsBasketball, color: '#f97316' },
-    { id: 'tennis', name: 'Tennis', icon: MdSportsTennis, color: '#eab308' },
-    { id: 'badminton', name: 'Badminton', icon: GiShuttlecock, color: '#3b82f6' },
-    { id: 'motorsport', name: 'Motor Sports', icon: MdSportsMotorsports, color: '#ef4444' },
-    { id: 'fight', name: 'UFC/Boxing', icon: MdSportsMma, color: '#dc2626' },
-    { id: 'hockey', name: 'Hockey', icon: MdSportsHockey, color: '#06b6d4' },
-    { id: 'american-football', name: 'American Football', icon: MdSportsFootball, color: '#854d0e' },
-    { id: 'baseball', name: 'Baseball', icon: MdSportsBaseball, color: '#e11d48' },
-    { id: 'rugby', name: 'Rugby', icon: MdSportsRugby, color: '#16a34a' },
-    { id: 'golf', name: 'Golf', icon: MdSportsGolf, color: '#65a30d' },
-    { id: 'cricket', name: 'Cricket', icon: MdSportsCricket, color: '#0891b2' },
-    { id: 'billiards', name: 'Billiards', icon: GiPoolTriangle, color: '#059669' },
-    { id: 'darts', name: 'Darts', icon: GiDart, color: '#dc2626' },
-    { id: 'afl', name: 'AFL', icon: MdSportsRugby, color: '#7c3aed' },
-    { id: 'other', name: 'Lainnya', icon: FaTrophy, color: '#f59e0b' },
+    // Existing pages (direct routes)
+    { id: 'football', name: 'Sepakbola', icon: MdSportsSoccer, color: '#22c55e', href: '/football' },
+    { id: 'basketball', name: 'Basketball', icon: MdSportsBasketball, color: '#f97316', href: '/basketball' },
+    { id: 'tennis', name: 'Tennis', icon: MdSportsTennis, color: '#eab308', href: '/tennis' },
+    { id: 'badminton', name: 'Badminton', icon: GiShuttlecock, color: '#3b82f6', href: '/badminton' },
+    { id: 'motorsport', name: 'Motor Sports', icon: MdSportsMotorsports, color: '#ef4444', href: '/motorsport' },
+
+    // New sports (via /sports/ routes)
+    { id: 'ppv', name: 'UFC/Boxing/PPV', icon: MdSportsMma, color: '#dc2626', href: '/sports/ppv' },
+    { id: 'nhl', name: 'NHL / Hockey', icon: MdSportsHockey, color: '#06b6d4', href: '/sports/nhl' },
+    { id: 'nfl', name: 'NFL', icon: MdSportsFootball, color: '#854d0e', href: '/sports/nfl' },
+    { id: 'mlb', name: 'MLB / Baseball', icon: MdSportsBaseball, color: '#e11d48', href: '/sports/mlb' },
+    { id: 'rugby', name: 'Rugby', icon: MdSportsRugby, color: '#16a34a', href: '/sports/rugby' },
+    { id: 'golf', name: 'Golf', icon: MdSportsGolf, color: '#65a30d', href: '/sports/golf' },
+    { id: 'cricket', name: 'Cricket', icon: MdSportsCricket, color: '#0891b2', href: '/sports/cricket' },
+    { id: 'volleyball', name: 'Volleyball', icon: MdSportsRugby, color: '#eab308', href: '/sports/volleyball' },
+    { id: 'handball', name: 'Handball', icon: MdSportsMma, color: '#06b6d4', href: '/sports/handball' },
+    { id: 'mls', name: 'MLS', icon: MdSportsSoccer, color: '#a855f7', href: '/sports/mls' },
+    { id: 'wnba', name: 'WNBA', icon: MdSportsBasketball, color: '#f97316', href: '/sports/wnba' },
+    { id: 'ncaa_basketball', name: 'NCAA Basketball', icon: MdSportsBasketball, color: '#6366f1', href: '/sports/ncaa_basketball' },
+    { id: 'espn_plus', name: 'ESPN+ Events', icon: FaTrophy, color: '#ef4444', href: '/sports/espn_plus' },
 ];
 
 export default function Navbar() {
@@ -60,7 +65,7 @@ export default function Navbar() {
     const pathname = usePathname();
 
     const isActive = (path) => pathname === path;
-    const isCategoryActive = (catId) => pathname === `/${catId}` || pathname.startsWith(`/${catId}/`);
+    const isCategoryActive = (catHref) => pathname === catHref || pathname.startsWith(`${catHref}/`);
 
     return (
         <>
@@ -158,8 +163,8 @@ export default function Navbar() {
                             return (
                                 <Link
                                     key={cat.id}
-                                    href={`/${cat.id}`}
-                                    className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${isCategoryActive(cat.id)
+                                    href={cat.href}
+                                    className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${isCategoryActive(cat.href)
                                         ? 'text-green-500 bg-green-500/10'
                                         : 'text-gray-300 hover:text-green-500 hover:bg-gray-800'
                                         }`}
@@ -167,7 +172,7 @@ export default function Navbar() {
                                 >
                                     <IconComponent
                                         size={18}
-                                        style={{ color: isCategoryActive(cat.id) ? '#22c55e' : cat.color }}
+                                        style={{ color: isCategoryActive(cat.href) ? '#22c55e' : cat.color }}
                                     />
                                     <span>{cat.name}</span>
                                 </Link>
@@ -192,15 +197,15 @@ export default function Navbar() {
                                 return (
                                     <Link
                                         key={cat.id}
-                                        href={`/${cat.id}`}
-                                        className={`flex items-center gap-2 text-sm px-4 py-2 whitespace-nowrap transition-colors ${isCategoryActive(cat.id)
+                                        href={cat.href}
+                                        className={`flex items-center gap-2 text-sm px-4 py-2 whitespace-nowrap transition-colors ${isCategoryActive(cat.href)
                                             ? 'text-green-500'
                                             : 'text-gray-300 hover:text-green-500'
                                             }`}
                                     >
                                         <IconComponent
                                             size={18}
-                                            style={{ color: isCategoryActive(cat.id) ? '#22c55e' : cat.color }}
+                                            style={{ color: isCategoryActive(cat.href) ? '#22c55e' : cat.color }}
                                         />
                                         <span>{cat.name}</span>
                                     </Link>
@@ -243,8 +248,8 @@ export default function Navbar() {
                                                 return (
                                                     <Link
                                                         key={cat.id}
-                                                        href={`/${cat.id}`}
-                                                        className={`flex items-center gap-3 px-4 py-3 text-sm transition-colors ${isCategoryActive(cat.id)
+                                                        href={cat.href}
+                                                        className={`flex items-center gap-3 px-4 py-3 text-sm transition-colors ${isCategoryActive(cat.href)
                                                             ? 'text-green-500 bg-green-500/10'
                                                             : 'text-gray-300 hover:text-green-500 hover:bg-gray-700'
                                                             }`}
@@ -252,7 +257,7 @@ export default function Navbar() {
                                                     >
                                                         <IconComponent
                                                             size={18}
-                                                            style={{ color: isCategoryActive(cat.id) ? '#22c55e' : cat.color }}
+                                                            style={{ color: isCategoryActive(cat.href) ? '#22c55e' : cat.color }}
                                                         />
                                                         <span>{cat.name}</span>
                                                     </Link>
