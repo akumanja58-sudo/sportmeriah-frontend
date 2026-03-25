@@ -1,13 +1,8 @@
-// ============================================================
-// TEMPLATE: app/sports/[sport]/[streamId]/page.jsx
-// Player page for any sport stream
-// ============================================================
-
 import SportPlayerClient from '../../../components/SportPlayerClient';
 import { SPORT_CONFIGS } from '../../../components/SportPageClient';
 
 export async function generateMetadata({ params }) {
-    const { sport, streamId } = params;
+    const { sport } = await params;
     const config = SPORT_CONFIGS[sport];
     const name = config?.name || 'Sports';
 
@@ -17,7 +12,7 @@ export async function generateMetadata({ params }) {
     };
 }
 
-export default function SportPlayerPage({ params }) {
-    const { sport, streamId } = params;
+export default async function SportPlayerPage({ params }) {
+    const { sport, streamId } = await params;
     return <SportPlayerClient sport={sport} streamId={streamId} />;
 }
