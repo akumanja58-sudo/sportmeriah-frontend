@@ -11,14 +11,14 @@ export async function generateMetadata({ params }) {
     const config = SPORT_CONFIGS[sport];
 
     if (!config) {
-        return { title: 'Sport Not Found - SportMeriah' };
+        return { title: 'Sport Not Found - NobarMeriah' };
     }
 
     return {
         title: config.seoTitle,
         description: config.seoDesc,
         openGraph: {
-            title: `${config.emoji} ${config.seoTitle}`,
+            title: config.seoTitle,
             description: config.seoDesc,
             url: `https://www.nobarmeriah.com/sports/${sport}`,
         },

@@ -141,7 +141,7 @@ export default function BasketballPlayerClient({ streamId }) {
     const displayTitle = matchData ? `${matchData.homeTeam?.name} vs ${matchData.awayTeam?.name}` : parsedInfo.title;
     const displayLeague = matchData?.league?.name || parsedInfo.league || 'NBA';
     const shareUrl = typeof window !== 'undefined' ? window.location.href : '';
-    const shareText = `Nonton ${displayTitle} live di SportMeriah!`;
+    const shareText = `Nonton ${displayTitle} live di NobarMeriah!`;
 
     // ========== LOADING ==========
     if (loading) {
@@ -365,7 +365,7 @@ export default function BasketballPlayerClient({ streamId }) {
                         <div className="rounded-xl p-4 hidden sm:block" style={{ backgroundColor: '#1a1d27' }}>
                             <h2 className="text-base font-semibold text-white mb-2">Streaming NBA Basketball Gratis</h2>
                             <p className="text-gray-500 text-sm leading-relaxed">
-                                Tonton {displayTitle} secara gratis di SportMeriah. Live streaming NBA Basketball dengan kualitas HD, tanpa buffering.
+                                Tonton {displayTitle} secara gratis di NobarMeriah. Live streaming NBA Basketball dengan kualitas HD, tanpa buffering.
                             </p>
                         </div>
                     </div>

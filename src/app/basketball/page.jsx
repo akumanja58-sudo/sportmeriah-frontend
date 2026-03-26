@@ -5,7 +5,7 @@ import BasketballPageClient from './BasketballPageClient';
 
 export const metadata = {
     title: 'Live Streaming NBA Basketball - Jadwal & Skor NBA Hari Ini',
-    description: 'Nonton live streaming NBA Basketball gratis di SportMeriah. Jadwal lengkap pertandingan NBA, skor live, dan streaming HD tanpa buffering!',
+    description: 'Nonton live streaming NBA Basketball gratis di NobarMeriah. Jadwal lengkap pertandingan NBA, skor live, dan streaming HD tanpa buffering!',
     keywords: [
         'streaming NBA gratis',
         'nonton NBA online',
@@ -18,16 +18,16 @@ export const metadata = {
         'NBA live stream'
     ],
     openGraph: {
-        title: '🏀 Live Streaming NBA Basketball - SportMeriah',
+        title: '🏀 Live Streaming NBA Basketball - NobarMeriah',
         description: 'Nonton live streaming NBA Basketball gratis!',
         url: 'https://www.nobarmeriah.com/basketball',
-        siteName: 'SportMeriah',
+        siteName: 'NobarMeriah',
         images: [
             {
                 url: '/og-image.png',
                 width: 1200,
                 height: 630,
-                alt: 'SportMeriah - Streaming NBA Gratis',
+                alt: 'NobarMeriah - Streaming NBA Gratis',
             },
         ],
         locale: 'id_ID',
@@ -35,7 +35,7 @@ export const metadata = {
     },
     twitter: {
         card: 'summary_large_image',
-        title: '🏀 Live Streaming NBA Basketball - SportMeriah',
+        title: '🏀 Live Streaming NBA Basketball - NobarMeriah',
         description: 'Nonton live streaming NBA Basketball gratis!',
         images: ['/og-image.png'],
     },

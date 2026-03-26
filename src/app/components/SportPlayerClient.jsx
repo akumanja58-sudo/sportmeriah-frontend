@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import Navbar from './Navbar';
 import Link from 'next/link';
-import Hls from 'hls.js';
+import VideoPlayer from './VideoPlayer';
 
 import { IoHome } from 'react-icons/io5';
-import { MdLiveTv, MdFullscreen, MdRefresh } from 'react-icons/md';
+import { MdLiveTv, MdPlayArrow, MdArrowBack, MdSportsSoccer, MdSportsBasketball } from 'react-icons/md';
+import { FaTelegram } from 'react-icons/fa';
 import { SPORT_CONFIGS } from './SportPageClient';
 
 const API_URL = 'https://sportmeriah-backend-production.up.railway.app';
@@ -16,240 +17,182 @@ export default function SportPlayerClient({ sport, streamId }) {
     const config = SPORT_CONFIGS[sport];
     const SportIcon = config?.icon || MdLiveTv;
 
-    const videoRef = useRef(null);
-    const hlsRef = useRef(null);
-
     const [streamInfo, setStreamInfo] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [isPlaying, setIsPlaying] = useState(false);
-
-    const streamUrl = `${VPS_STREAM_BASE}/hls/sphere_${streamId}.m3u8`;
+    const [streamUrl, setStreamUrl] = useState(null);
+    const [streamLoading, setStreamLoading] = useState(false);
 
     useEffect(() => {
         fetchStreamInfo();
     }, [streamId]);
 
-    useEffect(() => {
-        if (!loading && videoRef.current) {
-            initHls();
-        }
-
-        return () => {
-            if (hlsRef.current) {
-                hlsRef.current.destroy();
-            }
-        };
-    }, [loading]);
-
     const fetchStreamInfo = async () => {
         try {
+            setError(null);
+            setLoading(true);
             const res = await fetch(`${API_URL}/api/sports/${sport}/stream/${streamId}`);
             const data = await res.json();
             if (data.success) {
                 setStreamInfo(data.stream);
+
+                setStreamLoading(true);
+                const startRes = await fetch(`${API_URL}/api/streams/sphere/start/${streamId}`);
+                const startData = await startRes.json();
+                const waitTime = startData.message?.includes('already running') ? 1000 : 8000;
+                await new Promise(resolve => setTimeout(resolve, waitTime));
+                setStreamUrl(`${VPS_STREAM_BASE}/hls/sphere_${streamId}.m3u8`);
+                setStreamLoading(false);
+            } else {
+                setError('Stream tidak ditemukan');
             }
         } catch (err) {
-            console.error('Failed to fetch stream info:', err);
+            console.error('Failed to fetch stream:', err);
+            setError('Gagal memuat stream');
         } finally {
             setLoading(false);
         }
     };
 
-    const initHls = () => {
-        const video = videoRef.current;
-        if (!video) return;
+    const refreshStream = () => { setIsPlaying(false); setStreamUrl(null); fetchStreamInfo(); };
 
-        if (hlsRef.current) {
-            hlsRef.current.destroy();
-        }
+    const displayTitle = streamInfo?.name || `${config?.name || 'Sports'} Stream`;
+    const displayLeague = streamInfo?.league || config?.name || 'Sports';
+    const accentHex = config?.accentHex || '#fb923c';
 
-        if (Hls.isSupported()) {
-            const hls = new Hls({
-                enableWorker: true,
-                lowLatencyMode: true,
-                backBufferLength: 90,
-                maxBufferLength: 30,
-                maxMaxBufferLength: 600,
-                maxBufferSize: 60 * 1000 * 1000,
-                maxBufferHole: 0.5,
-                liveSyncDurationCount: 3,
-                liveMaxLatencyDurationCount: 10,
-                fragLoadingTimeOut: 20000,
-                fragLoadingMaxRetry: 6,
-                fragLoadingRetryDelay: 1000,
-                manifestLoadingTimeOut: 15000,
-                manifestLoadingMaxRetry: 4,
-            });
+    // LOADING
+    if (loading) {
+        return (
+            <main className="min-h-screen" style={{ backgroundColor: '#0a0c14' }}>
+                <Navbar />
+                <div className="flex flex-col items-center justify-center min-h-[60vh]">
+                    <span className="loader"></span>
+                    <p className="text-gray-500 mt-4 text-sm">Memuat stream...</p>
+                    <style>{`
+                        .loader { width: 40px; height: 40px; border-radius: 50%; display: inline-block; border-top: 3px solid #fff; border-right: 3px solid transparent; box-sizing: border-box; animation: rot 1s linear infinite; position: relative; }
+                        .loader::after { content: ''; box-sizing: border-box; position: absolute; left: 0; top: 0; width: 40px; height: 40px; border-radius: 50%; border-left: 3px solid ${accentHex}; border-bottom: 3px solid transparent; animation: rot 0.5s linear infinite reverse; }
+                        @keyframes rot { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+                    `}</style>
+                </div>
+            </main>
+        );
+    }
 
-            hls.loadSource(streamUrl);
-            hls.attachMedia(video);
-
-            hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                video.play().catch(() => {});
-                setIsPlaying(true);
-            });
-
-            hls.on(Hls.Events.ERROR, (event, data) => {
-                if (data.fatal) {
-                    switch (data.type) {
-                        case Hls.ErrorTypes.NETWORK_ERROR:
-                            console.error('Network error, trying to recover...');
-                            hls.startLoad();
-                            break;
-                        case Hls.ErrorTypes.MEDIA_ERROR:
-                            console.error('Media error, trying to recover...');
-                            hls.recoverMediaError();
-                            break;
-                        default:
-                            setError('Stream tidak tersedia. Coba refresh atau kembali nanti.');
-                            hls.destroy();
-                            break;
-                    }
-                }
-            });
-
-            hlsRef.current = hls;
-        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-            video.src = streamUrl;
-            video.addEventListener('loadedmetadata', () => {
-                video.play().catch(() => {});
-                setIsPlaying(true);
-            });
-        }
-    };
-
-    const handleRefresh = () => {
-        setError(null);
-        initHls();
-    };
-
-    const handleFullscreen = () => {
-        const video = videoRef.current;
-        if (!video) return;
-
-        if (video.requestFullscreen) {
-            video.requestFullscreen();
-        } else if (video.webkitRequestFullscreen) {
-            video.webkitRequestFullscreen();
-        } else if (video.msRequestFullscreen) {
-            video.msRequestFullscreen();
-        }
-    };
+    // ERROR
+    if (error) {
+        return (
+            <main className="min-h-screen" style={{ backgroundColor: '#0a0c14' }}>
+                <Navbar />
+                <div className="max-w-6xl mx-auto px-4 py-8">
+                    <div className="rounded-xl p-6 text-center" style={{ backgroundColor: '#1a1d27', border: '1px solid rgba(239,68,68,0.2)' }}>
+                        <SportIcon size={40} className="text-gray-600 mx-auto mb-3" />
+                        <p className="text-gray-300 font-medium mb-1">{error}</p>
+                        <Link href={`/sports/${sport}`} className="text-sm mt-3 inline-flex items-center gap-1 hover:opacity-80" style={{ color: accentHex }}>
+                            <MdArrowBack size={16} /> Kembali ke {config?.name || 'Sports'}
+                        </Link>
+                    </div>
+                </div>
+            </main>
+        );
+    }
 
     return (
-        <main className="min-h-screen bg-gray-900">
+        <main className="min-h-screen" style={{ backgroundColor: '#0a0c14' }}>
             <Navbar />
 
-            <div className="container max-w-5xl mx-auto px-4 py-6">
+            <div className="max-w-5xl mx-auto px-3 sm:px-4 py-4 sm:py-6">
 
                 {/* Breadcrumb */}
-                <div className="flex items-center gap-2 mb-4 text-sm">
-                    <Link href="/" className="text-gray-400 hover:text-white">
-                        <IoHome size={16} />
-                    </Link>
-                    <span className="text-gray-600">/</span>
-                    <Link href={`/sports/${sport}`} className={`${config?.color || 'text-gray-400'} hover:text-white`}>
-                        {config?.name || 'Sports'}
-                    </Link>
-                    <span className="text-gray-600">/</span>
-                    <span className="text-gray-400 truncate max-w-[200px]">
-                        {streamInfo?.name || `Stream ${streamId}`}
-                    </span>
-                </div>
+                <nav className="text-sm text-gray-500 mb-4 hidden sm:block">
+                    <ol className="flex items-center gap-2">
+                        <li><Link href="/" className="hover:text-gray-300 flex items-center gap-1"><IoHome size={13} /> Home</Link></li>
+                        <li className="text-gray-700">/</li>
+                        <li><Link href={`/sports/${sport}`} className="hover:text-gray-300 flex items-center gap-1"><SportIcon size={13} /> {config?.name || 'Sports'}</Link></li>
+                        <li className="text-gray-700">/</li>
+                        <li className="text-gray-400 truncate max-w-[200px]">{displayTitle}</li>
+                    </ol>
+                </nav>
 
-                {/* Video Player */}
-                <div className="bg-black rounded-lg overflow-hidden relative">
-                    {loading ? (
-                        <div className="aspect-video flex items-center justify-center">
+                {/* VIDEO PLAYER */}
+                <div className="relative mb-4">
+                    {streamUrl && isPlaying ? (
+                        <VideoPlayer
+                            streamUrl={streamUrl}
+                            title={displayTitle}
+                            isLive={true}
+                            onRefresh={refreshStream}
+                        />
+                    ) : streamLoading ? (
+                        <div className="rounded-xl aspect-video flex items-center justify-center" style={{ backgroundColor: '#111318' }}>
                             <div className="text-center">
-                                <div className="loader mb-4"></div>
-                                <p className="text-gray-400">Memuat stream...</p>
-                            </div>
-                            <style jsx>{`
-                                .loader {
-                                    width: 48px;
-                                    height: 48px;
-                                    border-radius: 50%;
-                                    display: inline-block;
-                                    border-top: 4px solid #FFF;
-                                    border-right: 4px solid transparent;
-                                    box-sizing: border-box;
-                                    animation: rotation 1s linear infinite;
-                                }
-                                @keyframes rotation {
-                                    0% { transform: rotate(0deg); }
-                                    100% { transform: rotate(360deg); }
-                                }
-                            `}</style>
-                        </div>
-                    ) : error ? (
-                        <div className="aspect-video flex items-center justify-center">
-                            <div className="text-center">
-                                <p className="text-4xl mb-4">{config?.emoji || '📺'}</p>
-                                <p className="text-gray-400 mb-4">{error}</p>
-                                <button
-                                    onClick={handleRefresh}
-                                    className={`${config?.bgColor || 'bg-orange-600'} text-white px-4 py-2 rounded-lg hover:opacity-90 transition-opacity flex items-center gap-2 mx-auto`}
-                                >
-                                    <MdRefresh size={20} />
-                                    Coba Lagi
-                                </button>
+                                <span className="loader"></span>
+                                <p className="text-gray-400 mt-4 text-sm">Memuat Stream...</p>
+                                <style>{`
+                                    .loader { width: 40px; height: 40px; border-radius: 50%; display: inline-block; border-top: 3px solid #fff; border-right: 3px solid transparent; box-sizing: border-box; animation: rot 1s linear infinite; position: relative; }
+                                    .loader::after { content: ''; box-sizing: border-box; position: absolute; left: 0; top: 0; width: 40px; height: 40px; border-radius: 50%; border-left: 3px solid ${accentHex}; border-bottom: 3px solid transparent; animation: rot 0.5s linear infinite reverse; }
+                                    @keyframes rot { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+                                `}</style>
                             </div>
                         </div>
                     ) : (
-                        <video
-                            ref={videoRef}
-                            className="w-full aspect-video"
-                            controls
-                            autoPlay
-                            playsInline
-                        />
+                        <div className="rounded-xl aspect-video w-full overflow-hidden relative" style={{ backgroundColor: '#111318' }}>
+                            <div className="absolute inset-0 flex flex-col justify-center items-center text-center p-4">
+                                <SportIcon size={36} style={{ color: accentHex }} className="mb-3" />
+                                <h1 className="text-lg sm:text-2xl font-bold text-white mb-2">{displayTitle}</h1>
+                                <p className="text-sm mb-5 flex items-center gap-2" style={{ color: accentHex }}>
+                                    <SportIcon size={14} /> {displayLeague}
+                                </p>
+                                <button
+                                    onClick={() => { if (streamUrl) setIsPlaying(true); }}
+                                    disabled={!streamUrl}
+                                    className="font-semibold py-3 px-8 rounded-xl text-base transition-all transform flex items-center gap-2 text-white hover:scale-105 shadow-lg"
+                                    style={{ backgroundColor: streamUrl ? accentHex : '#232733', color: streamUrl ? '#fff' : '#6b7280', cursor: streamUrl ? 'pointer' : 'wait' }}
+                                >
+                                    <MdPlayArrow size={22} />
+                                    {streamUrl ? 'Tonton Sekarang' : 'Mempersiapkan...'}
+                                </button>
+                            </div>
+                        </div>
                     )}
                 </div>
 
-                {/* Controls */}
-                <div className="flex items-center justify-between mt-3 bg-gray-800 rounded-lg px-4 py-3">
-                    <div className="flex items-center gap-3">
-                        <SportIcon className={config?.color || 'text-orange-400'} size={24} />
-                        <div>
-                            <h2 className="text-white font-semibold text-sm sm:text-base truncate max-w-[250px] sm:max-w-[400px]">
-                                {streamInfo?.name || `${config?.name || 'Sports'} Stream`}
-                            </h2>
-                            <p className="text-gray-400 text-xs">
-                                {streamInfo?.league || config?.name || 'Sports'} • Sphere
+                {/* Info Card */}
+                <div className="rounded-xl p-4 mb-4" style={{ backgroundColor: '#1a1d27' }}>
+                    <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                            <h2 className="text-base sm:text-lg font-bold text-white mb-1">{displayTitle}</h2>
+                            <p className="text-gray-500 text-xs sm:text-sm flex items-center gap-2">
+                                <SportIcon size={14} style={{ color: accentHex }} />
+                                {displayLeague}
                             </p>
                         </div>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                        <button
-                            onClick={handleRefresh}
-                            className="text-gray-400 hover:text-white p-2 rounded-lg hover:bg-gray-700 transition-colors"
-                            title="Refresh Stream"
-                        >
-                            <MdRefresh size={20} />
-                        </button>
-                        <button
-                            onClick={handleFullscreen}
-                            className="text-gray-400 hover:text-white p-2 rounded-lg hover:bg-gray-700 transition-colors"
-                            title="Fullscreen"
-                        >
-                            <MdFullscreen size={20} />
-                        </button>
+                        <span className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg text-white flex-shrink-0" style={{ backgroundColor: accentHex }}>
+                            <span className="relative flex h-1.5 w-1.5">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-white"></span>
+                            </span>
+                            LIVE
+                        </span>
                     </div>
                 </div>
 
-                {/* Back Link */}
-                <div className="mt-6">
-                    <Link
-                        href={`/sports/${sport}`}
-                        className={`${config?.color || 'text-orange-400'} hover:underline text-sm flex items-center gap-1`}
-                    >
-                        ← Kembali ke {config?.name || 'Sports'}
-                    </Link>
-                </div>
+                {/* Back link */}
+                <Link href={`/sports/${sport}`} className="text-sm flex items-center gap-1 hover:opacity-80 transition-colors" style={{ color: accentHex }}>
+                    <MdArrowBack size={16} /> Kembali ke {config?.name || 'Sports'}
+                </Link>
             </div>
+
+            {/* Bottom Nav */}
+            <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden" style={{ backgroundColor: '#0a0c14', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                <div className="flex justify-around items-center py-2.5 px-1">
+                    <Link href="/" className="flex flex-col items-center px-3 py-1 text-gray-500 hover:text-emerald-400"><IoHome size={20} /><span className="text-[10px] mt-1">Beranda</span></Link>
+                    <Link href="/football" className="flex flex-col items-center px-3 py-1 text-gray-500 hover:text-emerald-400"><MdSportsSoccer size={20} /><span className="text-[10px] mt-1">Sepakbola</span></Link>
+                    <Link href="/basketball" className="flex flex-col items-center px-3 py-1 text-gray-500 hover:text-orange-400"><MdSportsBasketball size={20} /><span className="text-[10px] mt-1">NBA</span></Link>
+                    <a href="https://t.me/sportmeriah" target="_blank" className="flex flex-col items-center px-3 py-1 text-gray-500 hover:text-blue-400"><FaTelegram size={20} /><span className="text-[10px] mt-1">Telegram</span></a>
+                </div>
+            </nav>
+            <div className="h-16 md:hidden"></div>
         </main>
     );
 }

@@ -125,7 +125,7 @@ export default function MatchPageClient({ params, searchParams }) {
 
     // Share URL
     const shareUrl = typeof window !== 'undefined' ? window.location.href : '';
-    const shareTitle = fixture ? encodeURIComponent(`${fixture.teams.home.name} vs ${fixture.teams.away.name}`) : 'SportMeriah';
+    const shareTitle = fixture ? encodeURIComponent(`${fixture.teams.home.name} vs ${fixture.teams.away.name}`) : 'NobarMeriah';
 
     // Get other live matches
     const otherLiveMatches = allFixtures
@@ -506,7 +506,7 @@ export default function MatchPageClient({ params, searchParams }) {
                 {/* ========== SEO DESCRIPTION ========== */}
                 <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-gray-700 rounded-lg text-gray-300 text-xs sm:text-sm space-y-2">
                     <p>
-                        Watch the <strong>{matchTitle}</strong> stream live and for free on SportMeriah.
+                        Watch the <strong>{matchTitle}</strong> stream live and for free on NobarMeriah.
                         This football match kickoff at <strong>{kickoffDisplay}</strong>.
                     </p>
                     <p>

@@ -23,12 +23,12 @@ export async function generateMetadata({ params, searchParams }) {
 
                 return {
                     title: `Live Streaming ${matchTitle} - ${league}`,
-                    description: `Nonton live streaming ${matchTitle} gratis di SportMeriah. Pertandingan ${league} dengan kualitas HD tanpa buffering!`,
+                    description: `Nonton live streaming ${matchTitle} gratis di NobarMeriah. Pertandingan ${league} dengan kualitas HD tanpa buffering!`,
                     openGraph: {
                         title: `🔴 LIVE: ${matchTitle} - ${league}`,
                         description: `Nonton live streaming ${matchTitle} gratis!`,
                         url: `https://www.nobarmeriah.com/match/${fixtureId}`,
-                        siteName: 'SportMeriah',
+                        siteName: 'NobarMeriah',
                         images: [
                             {
                                 url: fixture.teams?.home?.logo || '/og-image.png',
@@ -57,7 +57,7 @@ export async function generateMetadata({ params, searchParams }) {
 
     return {
         title: 'Live Streaming Sepakbola',
-        description: 'Nonton live streaming sepakbola gratis di SportMeriah.',
+        description: 'Nonton live streaming sepakbola gratis di NobarMeriah.',
     };
 }
 

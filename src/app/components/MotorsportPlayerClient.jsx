@@ -1,32 +1,28 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Navbar from './Navbar';
-import Hls from 'hls.js';
+import VideoPlayer from './VideoPlayer';
 
-import { FaTelegram, FaWhatsapp, FaFacebook, FaTwitter, FaCopy, FaCheck } from 'react-icons/fa';
+import { FaTelegram, FaWhatsapp, FaFacebook, FaTwitter } from 'react-icons/fa';
 import { IoHome } from 'react-icons/io5';
-import { MdSportsMotorsports, MdSportsSoccer, MdSportsBasketball, MdPlayArrow, MdRefresh, MdShare, MdFullscreen, MdVolumeUp, MdVolumeOff } from 'react-icons/md';
+import { MdSportsMotorsports, MdSportsSoccer, MdSportsBasketball, MdSportsTennis, MdPlayArrow, MdShare, MdContentCopy, MdCheck, MdArrowBack } from 'react-icons/md';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://sportmeriah-backend-production.up.railway.app';
 
-// Parse channel name for clean display
 const parseChannelName = (name) => {
     if (!name) return { title: 'Motorsport Live', league: 'Motorsport' };
-
     let cleanName = name;
     cleanName = cleanName.replace(/^MOTORSPORT\s*\d*\s*:\s*/i, '');
     cleanName = cleanName.replace(/\s*@\s*[\d:]+\s*(AM|PM)?.*$/i, '');
-
     let league = 'Motorsport';
     const lower = name.toLowerCase();
     if (lower.includes('formula') || lower.includes('f1')) league = 'Formula 1';
     else if (lower.includes('motogp') || lower.includes('moto gp')) league = 'MotoGP';
     else if (lower.includes('f1 academy')) league = 'F1 Academy';
     else if (lower.includes('nascar')) league = 'NASCAR';
-
     return { title: cleanName.trim() || 'Motorsport Live', league };
 };
 
@@ -40,43 +36,28 @@ export default function MotorsportPlayerClient({ streamId }) {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [isPlaying, setIsPlaying] = useState(false);
-    const [isMuted, setIsMuted] = useState(false);
     const [copied, setCopied] = useState(false);
     const [streamUrl, setStreamUrl] = useState(null);
     const [streamLoading, setStreamLoading] = useState(false);
 
-    const videoRef = useRef(null);
-    const hlsRef = useRef(null);
-
     useEffect(() => {
         fetchStreamInfo();
         fetchRelatedChannels();
-        return () => {
-            if (hlsRef.current) hlsRef.current.destroy();
-        };
     }, [streamId, provider]);
 
     const fetchStreamInfo = async () => {
         try {
             setError(null);
             setLoading(true);
-
             const response = await fetch(`${API_URL}/api/motorsport/stream/${streamId}`);
             const data = await response.json();
-
             if (data.success) {
                 setStreamInfo(data.stream);
-                if (data.stream?.name) {
-                    setParsedInfo(parseChannelName(data.stream.name));
-                }
+                if (data.stream?.name) setParsedInfo(parseChannelName(data.stream.name));
 
-                // Start Sphere stream via VPS
-                console.log('Starting Sphere motorsport stream via VPS...');
                 setStreamLoading(true);
                 const startRes = await fetch(`${API_URL}/api/streams/sphere/start/${streamId}`);
                 const startData = await startRes.json();
-                console.log('VPS Sphere response:', startData);
-
                 const waitTime = startData.message?.includes('already running') ? 1000 : 8000;
                 await new Promise(resolve => setTimeout(resolve, waitTime));
                 setStreamUrl(`https://stream.nobarmeriah.com/hls/sphere_${streamId}.m3u8`);
@@ -97,262 +78,211 @@ export default function MotorsportPlayerClient({ streamId }) {
             const response = await fetch(`${API_URL}/api/motorsport`);
             const data = await response.json();
             if (data.success) {
-                const channels = (data.channels?.all || [])
-                    .filter(ch => String(ch.id) !== String(streamId))
-                    .slice(0, 5);
+                const channels = [...(data.channels?.all || []), ...(data.sportsTVChannels || [])]
+                    .filter(ch => String(ch.id) !== String(streamId)).slice(0, 8);
                 setRelatedChannels(channels);
             }
         } catch (err) { }
     };
 
-    const startStream = useCallback(() => {
-        if (!streamUrl || !videoRef.current) return;
-
-        if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; }
-
-        if (Hls.isSupported()) {
-            const hls = new Hls({
-                enableWorker: true,
-                lowLatencyMode: false,
-                backBufferLength: 90,
-                maxBufferLength: 60,
-                maxMaxBufferLength: 120,
-                maxBufferSize: 60 * 1000 * 1000,
-                maxBufferHole: 1.0,
-                liveSyncDurationCount: 4,
-                liveMaxLatencyDurationCount: 8,
-                liveDurationInfinity: true,
-                manifestLoadingMaxRetry: 10,
-                manifestLoadingRetryDelay: 1000,
-                levelLoadingMaxRetry: 10,
-                levelLoadingRetryDelay: 1000,
-                fragLoadingMaxRetry: 10,
-                fragLoadingRetryDelay: 1000,
-                startPosition: -1,
-            });
-            hls.loadSource(streamUrl);
-            hls.attachMedia(videoRef.current);
-            hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                videoRef.current.play().then(() => setIsPlaying(true)).catch(() => { });
-            });
-            hls.on(Hls.Events.ERROR, (event, data) => {
-                if (data.fatal) {
-                    if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
-                        console.log('Network error, retrying...');
-                        setTimeout(() => hls.startLoad(), 2000);
-                    } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
-                        hls.recoverMediaError();
-                    } else {
-                        setError('Stream error. Silakan refresh.');
-                    }
-                }
-            });
-            hlsRef.current = hls;
-        } else if (videoRef.current.canPlayType('application/vnd.apple.mpegurl')) {
-            videoRef.current.src = streamUrl;
-            videoRef.current.addEventListener('loadedmetadata', () => {
-                videoRef.current.play().then(() => setIsPlaying(true)).catch(() => { });
-            });
-        }
-    }, [streamUrl]);
-
-    useEffect(() => {
-        if (streamUrl) startStream();
-    }, [streamUrl, startStream]);
-
-    const refreshStream = () => {
-        setIsPlaying(false);
-        setError(null);
-        if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; }
-        fetchStreamInfo();
-    };
-
-    const toggleMute = () => { if (videoRef.current) { videoRef.current.muted = !videoRef.current.muted; setIsMuted(!isMuted); } };
-    const toggleFullscreen = () => { if (videoRef.current) { document.fullscreenElement ? document.exitFullscreen() : videoRef.current.requestFullscreen(); } };
+    const refreshStream = () => { setIsPlaying(false); setStreamUrl(null); fetchStreamInfo(); };
     const copyLink = () => { navigator.clipboard.writeText(window.location.href); setCopied(true); setTimeout(() => setCopied(false), 2000); };
 
     const displayTitle = parsedInfo.title;
     const displayLeague = parsedInfo.league;
     const shareUrl = typeof window !== 'undefined' ? window.location.href : '';
-    const shareText = `Nonton ${displayTitle} LIVE di NobarMeriah!`;
+    const shareText = `Nonton ${displayTitle} live di NobarMeriah!`;
 
+    // LOADING
     if (loading) {
         return (
-            <main className="min-h-screen" style={{ backgroundColor: '#0f0f1e' }}>
+            <main className="min-h-screen" style={{ backgroundColor: '#0a0c14' }}>
                 <Navbar />
-                <div className="flex flex-col items-center justify-center py-20">
-                    <div className="w-10 h-10 border-4 border-red-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-                    <p className="text-gray-400">Memuat stream...</p>
+                <div className="flex flex-col items-center justify-center min-h-[60vh]">
+                    <span className="loader"></span>
+                    <p className="text-gray-500 mt-4 text-sm">Memuat stream...</p>
+                    <style>{`
+                        .loader { width: 40px; height: 40px; border-radius: 50%; display: inline-block; border-top: 3px solid #fff; border-right: 3px solid transparent; box-sizing: border-box; animation: rot 1s linear infinite; position: relative; }
+                        .loader::after { content: ''; box-sizing: border-box; position: absolute; left: 0; top: 0; width: 40px; height: 40px; border-radius: 50%; border-left: 3px solid #ef4444; border-bottom: 3px solid transparent; animation: rot 0.5s linear infinite reverse; }
+                        @keyframes rot { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+                    `}</style>
+                </div>
+            </main>
+        );
+    }
+
+    // ERROR
+    if (error && !streamInfo) {
+        return (
+            <main className="min-h-screen" style={{ backgroundColor: '#0a0c14' }}>
+                <Navbar />
+                <div className="max-w-6xl mx-auto px-4 py-8">
+                    <div className="rounded-xl p-6 text-center" style={{ backgroundColor: '#1a1d27', border: '1px solid rgba(239,68,68,0.2)' }}>
+                        <MdSportsMotorsports size={40} className="text-gray-600 mx-auto mb-3" />
+                        <p className="text-gray-300 font-medium mb-1">{error}</p>
+                        <Link href="/motorsport" className="text-red-400 hover:text-red-300 text-sm mt-3 inline-flex items-center gap-1">
+                            <MdArrowBack size={16} /> Kembali ke Motorsport
+                        </Link>
+                    </div>
                 </div>
             </main>
         );
     }
 
     return (
-        <main className="min-h-screen" style={{ backgroundColor: '#0f0f1e' }}>
+        <main className="min-h-screen" style={{ backgroundColor: '#0a0c14' }}>
             <Navbar />
 
-            <div className="container max-w-7xl mx-auto px-4 py-4 sm:py-6">
+            <div className="max-w-6xl mx-auto px-3 sm:px-4 py-4 sm:py-6">
 
-                {/* Video Player */}
-                <div className="bg-black rounded-lg overflow-hidden mb-4 relative aspect-video">
-                    {streamLoading ? (
-                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-900">
-                            <div className="w-10 h-10 border-4 border-red-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-                            <p className="text-gray-400 text-sm">Memulai stream...</p>
-                        </div>
-                    ) : error ? (
-                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-900">
-                            <p className="text-red-400 mb-3">{error}</p>
-                            <button onClick={refreshStream} className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm transition">
-                                Coba Lagi
-                            </button>
+                {/* VIDEO PLAYER */}
+                <div className="relative mb-4">
+                    {streamUrl && isPlaying ? (
+                        <VideoPlayer
+                            streamUrl={streamUrl}
+                            title={displayTitle}
+                            isLive={true}
+                            onRefresh={refreshStream}
+                        />
+                    ) : streamLoading ? (
+                        <div className="rounded-xl aspect-video flex items-center justify-center" style={{ backgroundColor: '#111318' }}>
+                            <div className="text-center">
+                                <span className="loader"></span>
+                                <p className="text-gray-400 mt-4 text-sm">Memuat Stream...</p>
+                                <style>{`
+                                    .loader { width: 40px; height: 40px; border-radius: 50%; display: inline-block; border-top: 3px solid #fff; border-right: 3px solid transparent; box-sizing: border-box; animation: rot 1s linear infinite; position: relative; }
+                                    .loader::after { content: ''; box-sizing: border-box; position: absolute; left: 0; top: 0; width: 40px; height: 40px; border-radius: 50%; border-left: 3px solid #ef4444; border-bottom: 3px solid transparent; animation: rot 0.5s linear infinite reverse; }
+                                    @keyframes rot { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+                                `}</style>
+                            </div>
                         </div>
                     ) : (
-                        <video
-                            ref={videoRef}
-                            className="w-full h-full"
-                            controls={isPlaying}
-                            playsInline
-                        />
+                        <div className="rounded-xl aspect-video w-full overflow-hidden relative" style={{ backgroundColor: '#111318' }}>
+                            <div className="absolute inset-0 flex flex-col justify-center items-center text-center p-4">
+                                <h1 className="text-lg sm:text-2xl font-bold text-white mb-2">{displayTitle}</h1>
+                                <p className="text-red-400 text-sm mb-4 flex items-center gap-2">
+                                    <MdSportsMotorsports size={16} /> {displayLeague}
+                                </p>
+                                <div className="flex items-center justify-center gap-2 text-sm font-semibold text-emerald-400 mb-5">
+                                    <span className="relative flex h-2.5 w-2.5">
+                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                                    </span>
+                                    READY
+                                </div>
+                                <button
+                                    onClick={() => { if (streamUrl) setIsPlaying(true); }}
+                                    disabled={!streamUrl}
+                                    className={`font-semibold py-3 px-8 rounded-xl text-base transition-all transform flex items-center gap-2 ${streamUrl ? 'bg-red-600 hover:bg-red-700 text-white hover:scale-105 shadow-lg' : 'text-gray-500 cursor-wait'}`}
+                                    style={!streamUrl ? { backgroundColor: '#232733' } : {}}
+                                >
+                                    <MdPlayArrow size={22} />
+                                    {streamUrl ? 'Tonton Sekarang' : 'Mempersiapkan...'}
+                                </button>
+                            </div>
+                        </div>
                     )}
                 </div>
 
-                {/* Stream Info Bar */}
-                <div className="bg-gray-800 rounded-lg p-3 mb-4 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                        <span className="bg-red-600 text-white text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1">
-                            <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse"></span>
-                            LIVE
-                        </span>
-                        <span className="text-white text-sm font-medium truncate">{displayTitle}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        {isPlaying && (
-                            <>
-                                <button onClick={toggleMute} className="p-1.5 rounded-lg hover:bg-gray-700 text-gray-400 hover:text-white transition">
-                                    {isMuted ? <MdVolumeOff size={18} /> : <MdVolumeUp size={18} />}
-                                </button>
-                                <button onClick={refreshStream} className="p-1.5 rounded-lg hover:bg-gray-700 text-gray-400 hover:text-white transition">
-                                    <MdRefresh size={18} />
-                                </button>
-                                <button onClick={toggleFullscreen} className="p-1.5 rounded-lg hover:bg-gray-700 text-gray-400 hover:text-white transition">
-                                    <MdFullscreen size={18} />
-                                </button>
-                            </>
-                        )}
-                    </div>
-                </div>
-
-                <div className="flex flex-col lg:flex-row gap-4 sm:gap-6">
-
-                    {/* Left Column */}
+                {/* CONTENT */}
+                <div className="flex flex-col lg:flex-row gap-5">
                     <div className="w-full lg:w-3/4 space-y-4">
 
                         {/* Breadcrumb */}
-                        <nav className="text-sm text-gray-400 hidden sm:block">
+                        <nav className="text-sm text-gray-500 hidden sm:block">
                             <ol className="flex items-center gap-2">
-                                <li><Link href="/" className="hover:text-white flex items-center gap-1"><IoHome size={14} /> Home</Link></li>
-                                <li>/</li>
-                                <li><Link href="/motorsport" className="hover:text-white flex items-center gap-1"><MdSportsMotorsports size={14} /> Motorsport</Link></li>
-                                <li>/</li>
-                                <li className="text-white truncate max-w-[200px]">{displayTitle}</li>
+                                <li><Link href="/" className="hover:text-gray-300 flex items-center gap-1 transition-colors"><IoHome size={13} /> Home</Link></li>
+                                <li className="text-gray-700">/</li>
+                                <li><Link href="/motorsport" className="hover:text-gray-300 flex items-center gap-1 transition-colors"><MdSportsMotorsports size={13} /> Motorsport</Link></li>
+                                <li className="text-gray-700">/</li>
+                                <li className="text-gray-400 truncate max-w-[200px]">{displayTitle}</li>
                             </ol>
                         </nav>
 
-                        {/* Match Info Card */}
-                        <div className="bg-gray-800 rounded-lg p-3 sm:p-4">
+                        {/* Info Card */}
+                        <div className="rounded-xl p-4" style={{ backgroundColor: '#1a1d27' }}>
                             <div className="flex items-start justify-between gap-3">
                                 <div className="min-w-0 flex-1">
-                                    <h2 className="text-base sm:text-xl font-bold text-white mb-1">{displayTitle}</h2>
-                                    <p className="text-gray-400 text-xs sm:text-sm flex items-center gap-2">
-                                        <MdSportsMotorsports className="text-red-500 flex-shrink-0" />
+                                    <h2 className="text-base sm:text-lg font-bold text-white mb-1">{displayTitle}</h2>
+                                    <p className="text-gray-500 text-xs sm:text-sm flex items-center gap-2">
+                                        <MdSportsMotorsports className="text-red-500 flex-shrink-0" size={14} />
                                         <span className="truncate">{displayLeague}</span>
                                     </p>
                                 </div>
-                                <span className="bg-red-600 text-white text-[10px] sm:text-xs font-bold px-2 sm:px-3 py-1 rounded flex items-center gap-1 flex-shrink-0">
-                                    <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse"></span>
+                                <span className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-red-600 text-white flex-shrink-0">
+                                    <span className="relative flex h-1.5 w-1.5">
+                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                                        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-white"></span>
+                                    </span>
                                     LIVE
                                 </span>
                             </div>
                         </div>
 
-                        {/* Share Buttons */}
-                        <div className="bg-gray-800 rounded-lg p-3 sm:p-4">
-                            <h3 className="text-white font-semibold mb-3 flex items-center gap-2 text-sm sm:text-base">
-                                <MdShare /> Bagikan
+                        {/* Share */}
+                        <div className="rounded-xl p-4" style={{ backgroundColor: '#1a1d27' }}>
+                            <h3 className="text-white font-semibold mb-3 flex items-center gap-2 text-sm">
+                                <MdShare size={16} className="text-gray-400" /> Bagikan
                             </h3>
                             <div className="flex flex-wrap gap-2">
-                                <a href={`https://wa.me/?text=${encodeURIComponent(shareText + ' ' + shareUrl)}`} target="_blank" className="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg flex items-center gap-1.5 text-xs sm:text-sm transition">
-                                    <FaWhatsapp />
-                                </a>
-                                <a href={`https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}`} target="_blank" className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg flex items-center gap-1.5 text-xs sm:text-sm transition">
-                                    <FaTelegram />
-                                </a>
-                                <a href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}`} target="_blank" className="bg-sky-500 hover:bg-sky-600 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg flex items-center gap-1.5 text-xs sm:text-sm transition">
-                                    <FaTwitter />
-                                </a>
-                                <a href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`} target="_blank" className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg flex items-center gap-1.5 text-xs sm:text-sm transition">
-                                    <FaFacebook />
-                                </a>
-                                <button onClick={copyLink} className="bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg flex items-center gap-1.5 text-xs sm:text-sm transition">
-                                    {copied ? <FaCheck /> : <FaCopy />}
+                                <a href={`https://wa.me/?text=${encodeURIComponent(shareText + ' ' + shareUrl)}`} target="_blank" className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium text-white" style={{ backgroundColor: '#25D366' }}><FaWhatsapp size={14} /> <span className="hidden sm:inline">WhatsApp</span></a>
+                                <a href={`https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}`} target="_blank" className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium text-white" style={{ backgroundColor: '#0088cc' }}><FaTelegram size={14} /> <span className="hidden sm:inline">Telegram</span></a>
+                                <a href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}`} target="_blank" className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium text-white" style={{ backgroundColor: '#1DA1F2' }}><FaTwitter size={14} /> <span className="hidden sm:inline">Twitter</span></a>
+                                <a href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`} target="_blank" className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium text-white" style={{ backgroundColor: '#1877F2' }}><FaFacebook size={14} /> <span className="hidden sm:inline">Facebook</span></a>
+                                <button onClick={copyLink} className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium text-gray-300" style={{ backgroundColor: '#232733' }}>
+                                    {copied ? <MdCheck size={14} className="text-emerald-400" /> : <MdContentCopy size={14} />}
                                     <span className="hidden sm:inline">{copied ? 'Copied!' : 'Copy'}</span>
                                 </button>
                             </div>
                         </div>
 
-                        {/* SEO Content */}
-                        <div className="bg-gray-800 rounded-lg p-4 hidden sm:block">
-                            <h2 className="text-lg font-semibold text-white mb-2">Streaming {displayLeague} Gratis</h2>
-                            <p className="text-gray-400 text-sm leading-relaxed">
-                                Tonton {displayTitle} secara gratis di NobarMeriah. Live streaming motorsport dengan kualitas HD. Nikmati balapan tanpa buffering.
-                            </p>
+                        {/* SEO */}
+                        <div className="rounded-xl p-4 hidden sm:block" style={{ backgroundColor: '#1a1d27' }}>
+                            <h2 className="text-base font-semibold text-white mb-2">Streaming {displayLeague} Gratis</h2>
+                            <p className="text-gray-500 text-sm leading-relaxed">Tonton {displayTitle} secara gratis di NobarMeriah. Live streaming motorsport dengan kualitas HD.</p>
                         </div>
                     </div>
 
                     {/* Sidebar */}
                     <div className="w-full lg:w-1/4">
-                        <div className="bg-gray-800 rounded-lg p-3 sm:p-4 lg:sticky lg:top-32">
-                            <h3 className="text-white font-semibold mb-3 sm:mb-4 flex items-center gap-2 text-sm sm:text-base">
-                                <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
+                        <div className="rounded-xl p-4 lg:sticky lg:top-32" style={{ backgroundColor: '#1a1d27' }}>
+                            <h3 className="text-white font-semibold mb-4 flex items-center gap-2 text-sm">
+                                <span className="relative flex h-2 w-2">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                                </span>
                                 Channel Lainnya
                             </h3>
-
                             {relatedChannels.length > 0 ? (
                                 <div className="space-y-2">
                                     {relatedChannels.map((channel, index) => {
                                         const parsed = parseChannelName(channel.name);
                                         return (
-                                            <Link
-                                                key={channel.id || index}
-                                                href={`/motorsport/${channel.id}?provider=sphere`}
-                                                className="block bg-gray-700 hover:bg-gray-600 rounded-lg p-2.5 sm:p-3 transition"
-                                            >
+                                            <Link key={channel.id || index} href={`/motorsport/${channel.id}?provider=sphere`}
+                                                className="block rounded-lg p-2.5 transition-colors"
+                                                style={{ backgroundColor: '#232733' }}
+                                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#2a2e3a'}
+                                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#232733'}>
                                                 <div className="flex items-center gap-2">
-                                                    <MdSportsMotorsports size={14} className="text-red-500 flex-shrink-0" />
-                                                    <span className="text-white text-xs truncate flex-1">{parsed.title}</span>
+                                                    <MdSportsMotorsports size={12} className="text-red-500 flex-shrink-0" />
+                                                    <span className="text-gray-300 text-xs truncate flex-1">{parsed.title}</span>
                                                 </div>
-                                                <span className="text-gray-400 text-[10px] mt-1 block">{parsed.league}</span>
+                                                <span className="text-gray-600 text-[10px] mt-1 block">{parsed.league}</span>
                                             </Link>
                                         );
                                     })}
                                 </div>
                             ) : (
-                                <p className="text-gray-400 text-xs sm:text-sm">Tidak ada channel lainnya</p>
+                                <p className="text-gray-600 text-xs">Tidak ada channel lainnya</p>
                             )}
 
-                            {/* Quick Links */}
-                            <div className="mt-4 sm:mt-6 pt-3 sm:pt-4 border-t border-gray-700">
-                                <h4 className="text-white font-semibold mb-2 sm:mb-3 text-xs sm:text-sm">Quick Links</h4>
+                            <div className="mt-5 pt-4" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                                <h4 className="text-white font-semibold mb-3 text-xs uppercase tracking-wider">Quick Links</h4>
                                 <div className="space-y-2">
-                                    <Link href="/motorsport" className="block text-gray-400 hover:text-red-400 text-xs sm:text-sm">← Semua Motorsport</Link>
-                                    <Link href="/football" className="block text-gray-400 hover:text-green-400 text-xs sm:text-sm flex items-center gap-2">
-                                        <MdSportsSoccer size={14} /> Sepakbola
-                                    </Link>
-                                    <Link href="/basketball" className="block text-gray-400 hover:text-orange-400 text-xs sm:text-sm flex items-center gap-2">
-                                        <MdSportsBasketball size={14} /> Basketball
-                                    </Link>
+                                    <Link href="/motorsport" className="block text-gray-500 hover:text-red-400 text-sm flex items-center gap-2 transition-colors"><MdSportsMotorsports size={14} /> Semua Motorsport</Link>
+                                    <Link href="/football" className="block text-gray-500 hover:text-emerald-400 text-sm flex items-center gap-2 transition-colors"><MdSportsSoccer size={14} /> Sepakbola</Link>
+                                    <Link href="/basketball" className="block text-gray-500 hover:text-orange-400 text-sm flex items-center gap-2 transition-colors"><MdSportsBasketball size={14} /> Basketball</Link>
+                                    <Link href="/tennis" className="block text-gray-500 hover:text-yellow-400 text-sm flex items-center gap-2 transition-colors"><MdSportsTennis size={14} /> Tennis</Link>
                                 </div>
                             </div>
                         </div>
@@ -360,28 +290,15 @@ export default function MotorsportPlayerClient({ streamId }) {
                 </div>
             </div>
 
-            {/* Bottom Nav Mobile */}
-            <nav className="fixed bottom-0 left-0 right-0 bg-gray-900 border-t border-gray-700 z-50 md:hidden">
-                <div className="flex justify-around items-center py-2 px-1">
-                    <Link href="/" className="flex flex-col items-center px-2 py-2 text-gray-400 hover:text-white transition-colors">
-                        <IoHome size={20} />
-                        <span className="text-[10px] mt-1">Beranda</span>
-                    </Link>
-                    <Link href="/football" className="flex flex-col items-center px-2 py-2 text-gray-400 hover:text-green-400 transition-colors">
-                        <MdSportsSoccer size={20} />
-                        <span className="text-[10px] mt-1">Sepakbola</span>
-                    </Link>
-                    <Link href="/motorsport" className="flex flex-col items-center px-2 py-2 text-red-400">
-                        <MdSportsMotorsports size={20} />
-                        <span className="text-[10px] mt-1">Motorsport</span>
-                    </Link>
-                    <a href="https://t.me/sportmeriah" target="_blank" className="flex flex-col items-center px-2 py-2 text-gray-400 hover:text-blue-400 transition-colors">
-                        <FaTelegram size={20} />
-                        <span className="text-[10px] mt-1">Telegram</span>
-                    </a>
+            {/* Bottom Nav */}
+            <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden" style={{ backgroundColor: '#0a0c14', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                <div className="flex justify-around items-center py-2.5 px-1">
+                    <Link href="/" className="flex flex-col items-center px-3 py-1 text-gray-500 hover:text-emerald-400 transition-colors"><IoHome size={20} /><span className="text-[10px] mt-1">Beranda</span></Link>
+                    <Link href="/football" className="flex flex-col items-center px-3 py-1 text-gray-500 hover:text-emerald-400 transition-colors"><MdSportsSoccer size={20} /><span className="text-[10px] mt-1">Sepakbola</span></Link>
+                    <Link href="/motorsport" className="flex flex-col items-center px-3 py-1 text-red-400"><MdSportsMotorsports size={20} /><span className="text-[10px] mt-1 font-medium">Motor</span></Link>
+                    <a href="https://t.me/sportmeriah" target="_blank" className="flex flex-col items-center px-3 py-1 text-gray-500 hover:text-blue-400 transition-colors"><FaTelegram size={20} /><span className="text-[10px] mt-1">Telegram</span></a>
                 </div>
             </nav>
-
             <div className="h-16 md:hidden"></div>
         </main>
     );

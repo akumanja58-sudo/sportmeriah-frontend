@@ -161,7 +161,7 @@ export default function FootballPlayerClient({ fixtureId }) {
 
   const matchTitle = `${homeTeam.name} vs ${awayTeam.name}`;
   const shareUrl = typeof window !== 'undefined' ? window.location.href : '';
-  const shareText = `Nonton ${matchTitle} LIVE di SportMeriah!`;
+  const shareText = `Nonton ${matchTitle} LIVE di NobarMeriah!`;
 
   const hasStream = !!(streamIdFromUrl || fixture?.stream?.stream_id);
   const actualStreamId = streamIdFromUrl || fixture?.stream?.stream_id;
@@ -442,7 +442,7 @@ export default function FootballPlayerClient({ fixtureId }) {
             <div className="rounded-xl p-4 hidden sm:block" style={{ backgroundColor: '#1a1d27' }}>
               <h2 className="text-base font-semibold text-white mb-2">Streaming {league.name} Gratis</h2>
               <p className="text-gray-500 text-sm leading-relaxed">
-                Tonton {matchTitle} secara gratis di SportMeriah. Live streaming sepakbola dengan kualitas HD, tanpa buffering.
+                Tonton {matchTitle} secara gratis di NobarMeriah. Live streaming sepakbola dengan kualitas HD, tanpa buffering.
               </p>
             </div>
           </div>

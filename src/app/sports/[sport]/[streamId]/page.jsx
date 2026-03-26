@@ -7,8 +7,8 @@ export async function generateMetadata({ params }) {
     const name = config?.name || 'Sports';
 
     return {
-        title: `Live ${name} Stream - SportMeriah`,
-        description: `Nonton live streaming ${name} gratis di SportMeriah. HD tanpa buffering!`,
+        title: `Live ${name} Stream - NobarMeriah`,
+        description: `Nonton live streaming ${name} gratis di NobarMeriah. HD tanpa buffering!`,
     };
 }
 

@@ -4,8 +4,8 @@ export async function generateMetadata({ params }) {
     const { id } = await params;
 
     // Default metadata
-    let title = 'Live Streaming NBA Basketball | SportMeriah';
-    let description = 'Nonton live streaming NBA Basketball gratis di SportMeriah. Kualitas HD, tanpa buffering.';
+    let title = 'Live Streaming NBA Basketball | NobarMeriah';
+    let description = 'Nonton live streaming NBA Basketball gratis di NobarMeriah. Kualitas HD, tanpa buffering.';
 
     try {
         const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://sportmeriah-backend-production.up.railway.app';
@@ -14,16 +14,16 @@ export async function generateMetadata({ params }) {
 
         if (data.success && data.stream) {
             const streamName = data.stream.name || 'NBA Basketball';
-            title = `${streamName} - Live Streaming | SportMeriah`;
-            description = `Nonton ${streamName} live streaming gratis di SportMeriah. Kualitas HD, server stabil, tanpa buffering.`;
+            title = `${streamName} - Live Streaming | NobarMeriah`;
+            description = `Nonton ${streamName} live streaming gratis di NobarMeriah. Kualitas HD, server stabil, tanpa buffering.`;
         }
 
         if (data.match) {
             const homeName = data.match.homeTeam?.name || 'Home';
             const awayName = data.match.awayTeam?.name || 'Away';
             const leagueName = data.match.league?.name || 'NBA';
-            title = `${homeName} vs ${awayName} - ${leagueName} Live | SportMeriah`;
-            description = `Nonton ${homeName} vs ${awayName} (${leagueName}) live streaming gratis di SportMeriah. Kualitas HD, tanpa buffering.`;
+            title = `${homeName} vs ${awayName} - ${leagueName} Live | NobarMeriah`;
+            description = `Nonton ${homeName} vs ${awayName} (${leagueName}) live streaming gratis di NobarMeriah. Kualitas HD, tanpa buffering.`;
         }
     } catch (error) {
         console.error('Error fetching metadata:', error);
@@ -36,7 +36,7 @@ export async function generateMetadata({ params }) {
             title,
             description,
             type: 'website',
-            siteName: 'SportMeriah',
+            siteName: 'NobarMeriah',
         },
         twitter: {
             card: 'summary_large_image',

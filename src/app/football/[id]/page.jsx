@@ -6,8 +6,8 @@ export async function generateMetadata({ params, searchParams }) {
   const { id: fixtureId } = await params;
 
   // Default metadata
-  let title = 'Live Streaming Sepakbola | SportMeriah';
-  let description = 'Nonton live streaming sepakbola gratis di SportMeriah. Kualitas HD, tanpa buffering.';
+  let title = 'Live Streaming Sepakbola | NobarMeriah';
+  let description = 'Nonton live streaming sepakbola gratis di NobarMeriah. Kualitas HD, tanpa buffering.';
 
   try {
     const res = await fetch(`${API_URL}/api/fixtures/${fixtureId}`, { next: { revalidate: 60 } });
@@ -19,8 +19,8 @@ export async function generateMetadata({ params, searchParams }) {
       const awayName = fixture.teams?.away?.name || 'Away';
       const leagueName = fixture.league?.name || 'Football';
 
-      title = `${homeName} vs ${awayName} - ${leagueName} Live | SportMeriah`;
-      description = `Nonton ${homeName} vs ${awayName} (${leagueName}) live streaming gratis di SportMeriah. Kualitas HD, tanpa buffering.`;
+      title = `${homeName} vs ${awayName} - ${leagueName} Live | NobarMeriah`;
+      description = `Nonton ${homeName} vs ${awayName} (${leagueName}) live streaming gratis di NobarMeriah. Kualitas HD, tanpa buffering.`;
     }
   } catch (error) {
     console.error('Error fetching metadata:', error);
@@ -33,7 +33,7 @@ export async function generateMetadata({ params, searchParams }) {
       title,
       description,
       type: 'website',
-      siteName: 'SportMeriah',
+      siteName: 'NobarMeriah',
     },
     twitter: {
       card: 'summary_large_image',

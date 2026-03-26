@@ -1,6 +1,6 @@
 {
-  "name": "SportMeriah - Streaming Bola & Olahraga Gratis",
-  "short_name": "SportMeriah",
+  "name": "NobarMeriah - Streaming Bola & Olahraga Gratis",
+  "short_name": "NobarMeriah",
   "description": "Nonton live streaming bola dan olahraga gratis. Premier League, La Liga, Serie A, Champions League, NBA Basketball.",
   "start_url": "/",
   "display": "standalone",
@@ -69,7 +69,7 @@
       "sizes": "1280x720",
       "type": "image/png",
       "form_factor": "wide",
-      "label": "SportMeriah Homepage"
+      "label": "NobarMeriah Homepage"
     },
     {
       "src": "/screenshots/match.png",
