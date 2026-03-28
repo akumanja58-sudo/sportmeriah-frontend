@@ -20,7 +20,7 @@ const CHIP_CATEGORIES = [
     { id: 'tennis', name: 'Tennis', icon: MdSportsTennis, href: '/tennis' },
     { id: 'motorsport', name: 'Motor', icon: MdSportsMotorsports, href: '/motorsport' },
     { id: 'nhl', name: 'NHL', icon: MdSportsHockey, href: '/hockey' },
-    { id: 'nfl', name: 'NFL', icon: MdSportsFootball, href: '/sports/nfl' },
+    { id: 'nfl', name: 'NFL', icon: MdSportsFootball, href: '/nfl' },
     { id: 'mlb', name: 'MLB', icon: MdSportsBaseball, href: '/baseball' },
     { id: 'ppv', name: 'UFC/Boxing', icon: MdSportsMma, href: '/sports/ppv' },
 ];
@@ -33,7 +33,7 @@ const ALL_CATEGORIES = [
     { id: 'motorsport', name: 'Motorsport', icon: MdSportsMotorsports, href: '/motorsport' },
     { id: 'ppv', name: 'UFC / Boxing / PPV', icon: MdSportsMma, href: '/sports/ppv' },
     { id: 'nhl', name: 'NHL / Hockey', icon: MdSportsHockey, href: '/hockey' },
-    { id: 'nfl', name: 'NFL', icon: MdSportsFootball, href: '/sports/nfl' },
+    { id: 'nfl', name: 'NFL', icon: MdSportsFootball, href: '/nfl' },
     { id: 'mlb', name: 'MLB / Baseball', icon: MdSportsBaseball, href: '/baseball' },
     { id: 'rugby', name: 'Rugby', icon: MdSportsRugby, href: '/sports/rugby' },
     { id: 'golf', name: 'Golf', icon: MdSportsGolf, href: '/sports/golf' },
