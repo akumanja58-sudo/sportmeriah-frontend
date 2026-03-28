@@ -178,6 +178,31 @@ export default function RootLayout({ children }) {
                 />
             </head>
             <body className={inter.className}>
+                <script dangerouslySetInnerHTML={{
+                    __html: `
+                    (function() {
+                        document.addEventListener('contextmenu', function(e) { e.preventDefault(); });
+                        document.addEventListener('keydown', function(e) {
+                        if (e.key === 'F12' || 
+                            (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'i')) ||
+                            (e.ctrlKey && e.shiftKey && (e.key === 'J' || e.key === 'j')) ||
+                            (e.ctrlKey && e.shiftKey && (e.key === 'C' || e.key === 'c')) ||
+                            (e.ctrlKey && (e.key === 'U' || e.key === 'u'))) {
+                            e.preventDefault();
+                            window.location.href = '/404';
+                        }
+                        });
+                        (function detectDevTools() {
+                        setInterval(function() {
+                            var threshold = 160;
+                            if (window.outerWidth - window.innerWidth > threshold || 
+                                window.outerHeight - window.innerHeight > threshold) {
+                            window.location.href = '/404';
+                            }
+                        }, 500);
+                        })();
+                    })();
+                `}} />
                 {children}
             </body>
         </html>
