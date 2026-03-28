@@ -13,6 +13,8 @@ import { HiSignal, HiClock, HiTrophy } from 'react-icons/hi2';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://sportmeriah-backend-production.up.railway.app';
 const STREAM_BASE = 'https://stream.nobarmeriah.com';
+const BOHO_API = 'https://sport-meriah.com/debug.php';
+const BOHO_STREAM_BASE = 'https://stream.sport-meriah.com';
 
 function isLiveStatus(status) {
   const liveStatuses = ['1H', '2H', 'HT', 'ET', 'P', 'LIVE', 'BT'];
@@ -39,6 +41,11 @@ export default function FootballPlayerClient({ fixtureId }) {
   const [altStream, setAltStream] = useState(null);
   const [streamLoading, setStreamLoading] = useState(false);
   const [countdown, setCountdown] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+
+  // === BOHOSport State ===
+  const [bohoSources, setBohoSources] = useState([]);
+  const [activeServer, setActiveServer] = useState(null);
+  const [iframeUrl, setIframeUrl] = useState(null);
 
   const countdownRef = useRef(null);
 
@@ -67,6 +74,7 @@ export default function FootballPlayerClient({ fixtureId }) {
           if (sid) {
             setTimeout(() => startStream(sid, prov), 500);
           }
+          fetchBohoSources(data.fixture);
         } else if (!isFinishedStatus(status)) {
           startCountdown(new Date(data.fixture.date).getTime());
         }
@@ -78,6 +86,45 @@ export default function FootballPlayerClient({ fixtureId }) {
       setError('Gagal memuat data pertandingan');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchBohoSources = async (fixtureData) => {
+    try {
+      const homeName = fixtureData?.teams?.home?.name || '';
+      const awayName = fixtureData?.teams?.away?.name || '';
+
+      const res = await fetch(`${BOHO_API}?action=matches&sport=football`);
+      const data = await res.json();
+      if (!data?.data) return;
+
+      const matches = data.data;
+      const matchingMatch = matches.find(m => {
+        const title = (m.title || '').toLowerCase();
+        const home = homeName.toLowerCase().split(' ').pop();
+        const away = awayName.toLowerCase().split(' ').pop();
+        return title.includes(home) && title.includes(away);
+      });
+
+      if (!matchingMatch) return;
+
+      const detailRes = await fetch(`${BOHO_API}?action=detail&id=${matchingMatch.id}&sport=football`);
+      const detailData = await detailRes.json();
+
+      if (detailData?.data?.sources?.length > 0) {
+        const sources = detailData.data.sources.map(src => ({
+          id: src.id,
+          streamNo: src.streamNo,
+          language: src.language || 'Multi',
+          hd: src.hd,
+          source: src.source,
+          viewers: src.viewers || 0,
+          proxyUrl: src.proxyUrl || `${BOHO_STREAM_BASE}/?source=${encodeURIComponent(src.source)}&id=${encodeURIComponent(src.id)}&variant=${src.streamNo}`,
+        }));
+        setBohoSources(sources);
+      }
+    } catch (err) {
+      console.error('BOHOSport fetch error:', err);
     }
   };
 
@@ -118,11 +165,13 @@ export default function FootballPlayerClient({ fixtureId }) {
     if (!streamId) return;
     try {
       setStreamLoading(true);
+      setIframeUrl(null);
       await fetch(`${API_URL}/api/streams/sphere/start/${streamId}`);
       const hlsUrl = `${STREAM_BASE}/hls/sphere_${streamId}.m3u8`;
       await new Promise(resolve => setTimeout(resolve, 5000));
       setStreamUrl(hlsUrl);
       setIsPlaying(true);
+      setActiveServer({ type: 'sphere', id: streamId, label: 'Sphere' });
     } catch (error) {
       console.error('Failed to start stream:', error);
       setError('Gagal memulai stream');
@@ -131,10 +180,30 @@ export default function FootballPlayerClient({ fixtureId }) {
     }
   };
 
+  const startBohoStream = (source) => {
+    setStreamUrl(null);
+    setIframeUrl(source.proxyUrl);
+    setIsPlaying(true);
+    setStreamLoading(false);
+    setActiveServer({
+      type: 'boho',
+      id: source.id,
+      streamNo: source.streamNo,
+      label: `Server ${source.streamNo}`,
+      source: source.source,
+    });
+  };
+
   const refreshStream = () => {
-    const sid = streamIdFromUrl || fixture?.stream?.stream_id;
-    const prov = fixture?.stream?.provider || providerFromUrl;
-    if (sid) startStream(sid, prov);
+    if (activeServer?.type === 'boho') {
+      const currentUrl = iframeUrl;
+      setIframeUrl(null);
+      setTimeout(() => setIframeUrl(currentUrl), 100);
+    } else {
+      const sid = streamIdFromUrl || fixture?.stream?.stream_id;
+      const prov = fixture?.stream?.provider || providerFromUrl;
+      if (sid) startStream(sid, prov);
+    }
   };
 
   const switchServer = () => {
@@ -148,7 +217,6 @@ export default function FootballPlayerClient({ fixtureId }) {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // Derived values
   const status = fixture?.status?.short || 'NS';
   const isLive = isLiveStatus(status);
   const isFinished = isFinishedStatus(status);
@@ -166,6 +234,7 @@ export default function FootballPlayerClient({ fixtureId }) {
   const hasStream = !!(streamIdFromUrl || fixture?.stream?.stream_id);
   const actualStreamId = streamIdFromUrl || fixture?.stream?.stream_id;
   const streamProvider = fixture?.stream?.provider || providerFromUrl;
+  const totalServers = (hasStream ? 1 : 0) + bohoSources.length;
 
   const formatKickoff = () => {
     if (!fixture?.date) return '-';
@@ -175,7 +244,6 @@ export default function FootballPlayerClient({ fixtureId }) {
     }) + ' WIB';
   };
 
-  // ========== LOADING ==========
   if (loading) {
     return (
       <main className="min-h-screen" style={{ backgroundColor: '#0a0c14' }}>
@@ -183,17 +251,12 @@ export default function FootballPlayerClient({ fixtureId }) {
         <div className="flex flex-col items-center justify-center min-h-[60vh]">
           <span className="loader"></span>
           <p className="text-gray-500 mt-4 text-sm">Memuat pertandingan...</p>
-          <style>{`
-            .loader { width: 40px; height: 40px; border-radius: 50%; display: inline-block; border-top: 3px solid #fff; border-right: 3px solid transparent; box-sizing: border-box; animation: rot 1s linear infinite; position: relative; }
-            .loader::after { content: ''; box-sizing: border-box; position: absolute; left: 0; top: 0; width: 40px; height: 40px; border-radius: 50%; border-left: 3px solid #10b981; border-bottom: 3px solid transparent; animation: rot 0.5s linear infinite reverse; }
-            @keyframes rot { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-          `}</style>
+          <style>{`.loader{width:40px;height:40px;border-radius:50%;display:inline-block;border-top:3px solid #fff;border-right:3px solid transparent;box-sizing:border-box;animation:rot 1s linear infinite;position:relative}.loader::after{content:'';box-sizing:border-box;position:absolute;left:0;top:0;width:40px;height:40px;border-radius:50%;border-left:3px solid #10b981;border-bottom:3px solid transparent;animation:rot .5s linear infinite reverse}@keyframes rot{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}`}</style>
         </div>
       </main>
     );
   }
 
-  // ========== ERROR ==========
   if (error || !fixture) {
     return (
       <main className="min-h-screen" style={{ backgroundColor: '#0a0c14' }}>
@@ -211,7 +274,6 @@ export default function FootballPlayerClient({ fixtureId }) {
     );
   }
 
-  // ========== FINISHED ==========
   if (isFinished) {
     return (
       <main className="min-h-screen" style={{ backgroundColor: '#0a0c14' }}>
@@ -221,7 +283,6 @@ export default function FootballPlayerClient({ fixtureId }) {
             <HiClock size={36} className="text-gray-500 mx-auto mb-3" />
             <h1 className="text-xl font-bold text-white mb-2">Pertandingan Sudah Selesai</h1>
             <p className="text-gray-500 text-sm mb-6">Pertandingan ini sudah berakhir</p>
-
             <div className="rounded-xl p-5 mb-6" style={{ backgroundColor: '#232733' }}>
               <div className="flex items-center justify-center gap-6">
                 <div className="text-center">
@@ -236,7 +297,6 @@ export default function FootballPlayerClient({ fixtureId }) {
               </div>
               <p className="text-gray-500 text-xs mt-3">{league.name}</p>
             </div>
-
             <Link href="/football" className="inline-flex items-center gap-2 text-sm font-medium px-5 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white transition-colors">
               <MdArrowBack size={16} /> Lihat Pertandingan Lain
             </Link>
@@ -246,18 +306,14 @@ export default function FootballPlayerClient({ fixtureId }) {
     );
   }
 
-  // ========== MAIN RENDER ==========
   return (
     <main className="min-h-screen" style={{ backgroundColor: '#0a0c14' }}>
       <Navbar />
-
       <div className="max-w-6xl mx-auto px-4 py-4 sm:py-6">
 
         {/* PLAYER SECTION */}
         <div className="relative mb-4">
-
-          {/* PLAYING */}
-          {streamUrl && isPlaying ? (
+          {streamUrl && isPlaying && !iframeUrl ? (
             <VideoPlayer
               streamUrl={streamUrl}
               title={matchTitle}
@@ -266,23 +322,26 @@ export default function FootballPlayerClient({ fixtureId }) {
               onSwitchServer={altStream ? switchServer : null}
               altServerLabel={altStream ? 'Server 2' : null}
             />
+          ) : iframeUrl && isPlaying ? (
+            <div className="rounded-xl overflow-hidden aspect-video bg-black relative">
+              <iframe
+                src={iframeUrl}
+                className="w-full h-full absolute inset-0 border-0"
+                allow="autoplay; encrypted-media; fullscreen"
+                allowFullScreen
+              />
+            </div>
           ) : streamLoading ? (
             <div className="rounded-xl aspect-video flex items-center justify-center" style={{ backgroundColor: '#111318' }}>
               <div className="text-center">
                 <span className="loader"></span>
                 <p className="text-gray-400 mt-4 text-sm">Memuat Stream...</p>
-                <style>{`
-                  .loader { width: 40px; height: 40px; border-radius: 50%; display: inline-block; border-top: 3px solid #fff; border-right: 3px solid transparent; box-sizing: border-box; animation: rot 1s linear infinite; position: relative; }
-                  .loader::after { content: ''; box-sizing: border-box; position: absolute; left: 0; top: 0; width: 40px; height: 40px; border-radius: 50%; border-left: 3px solid #10b981; border-bottom: 3px solid transparent; animation: rot 0.5s linear infinite reverse; }
-                  @keyframes rot { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-                `}</style>
+                <style>{`.loader{width:40px;height:40px;border-radius:50%;display:inline-block;border-top:3px solid #fff;border-right:3px solid transparent;box-sizing:border-box;animation:rot 1s linear infinite;position:relative}.loader::after{content:'';box-sizing:border-box;position:absolute;left:0;top:0;width:40px;height:40px;border-radius:50%;border-left:3px solid #10b981;border-bottom:3px solid transparent;animation:rot .5s linear infinite reverse}@keyframes rot{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}`}</style>
               </div>
             </div>
-          ) : isLive && hasStream ? (
-            /* LIVE — READY TO PLAY */
+          ) : isLive && (hasStream || bohoSources.length > 0) ? (
             <div className="rounded-xl w-full overflow-hidden min-h-[350px] sm:min-h-[400px] md:aspect-video relative" style={{ backgroundColor: '#111318' }}>
               <div className="absolute inset-0 flex flex-col justify-center items-center text-center p-4">
-
                 <div className="flex items-center justify-center gap-4 sm:gap-8 mb-5">
                   <div className="text-center">
                     <img src={homeTeam.logo} alt={homeTeam.name} className="w-16 h-16 sm:w-20 sm:h-20 object-contain mx-auto mb-2" onError={(e) => e.target.src = 'https://placehold.co/80x80/232733/6b7280?text=T'} />
@@ -303,23 +362,28 @@ export default function FootballPlayerClient({ fixtureId }) {
                     <p className="text-white font-semibold text-sm sm:text-base truncate max-w-[100px]">{awayTeam.name}</p>
                   </div>
                 </div>
-
                 <p className="text-gray-500 text-sm mb-5">{league.name}</p>
-
                 <button
-                  onClick={() => startStream(actualStreamId, streamProvider)}
+                  onClick={() => {
+                    if (hasStream) {
+                      startStream(actualStreamId, streamProvider);
+                    } else if (bohoSources.length > 0) {
+                      startBohoStream(bohoSources[0]);
+                    }
+                  }}
                   className="bg-red-600 hover:bg-red-700 text-white font-semibold py-3 px-8 rounded-xl text-base transition-all transform hover:scale-105 flex items-center gap-2 shadow-lg"
                 >
                   <MdPlayArrow size={22} />
                   Tonton Sekarang
                 </button>
+                {totalServers > 1 && (
+                  <p className="text-gray-600 text-xs mt-3">{totalServers} server tersedia</p>
+                )}
               </div>
             </div>
           ) : (
-            /* UPCOMING */
             <div className="rounded-xl w-full overflow-hidden min-h-[350px] sm:min-h-[400px] md:aspect-video relative" style={{ backgroundColor: '#111318' }}>
               <div className="absolute inset-0 flex flex-col justify-center items-center text-center p-4">
-
                 <div className="flex items-center justify-center gap-4 sm:gap-8 mb-5">
                   <div className="text-center">
                     <img src={homeTeam.logo} alt={homeTeam.name} className="w-16 h-16 sm:w-20 sm:h-20 object-contain mx-auto mb-2" onError={(e) => e.target.src = 'https://placehold.co/80x80/232733/6b7280?text=T'} />
@@ -331,11 +395,8 @@ export default function FootballPlayerClient({ fixtureId }) {
                     <p className="text-white font-semibold text-sm sm:text-base truncate max-w-[100px]">{awayTeam.name}</p>
                   </div>
                 </div>
-
                 <p className="text-gray-500 text-sm mb-1">{league.name}</p>
                 <p className="text-gray-500 text-sm mb-5 flex items-center gap-1.5"><HiClock size={13} /> {formatKickoff()}</p>
-
-                {/* Countdown */}
                 <div className="flex justify-center gap-3 sm:gap-4 mb-5">
                   {countdown.days > 0 && (
                     <div className="rounded-lg min-w-[50px] sm:min-w-[60px] px-3 py-2 sm:px-4 sm:py-3 text-center" style={{ backgroundColor: '#1a1d27', border: '1px solid rgba(255,255,255,0.06)' }}>
@@ -356,11 +417,9 @@ export default function FootballPlayerClient({ fixtureId }) {
                     <p className="text-[10px] sm:text-xs text-gray-600 mt-1">Detik</p>
                   </div>
                 </div>
-
                 <p className="text-gray-600 text-xs mb-3">
                   {hasStream ? 'Stream akan tersedia saat match dimulai' : 'Stream belum tersedia'}
                 </p>
-
                 <Link href="/football" className="text-emerald-400 hover:text-emerald-300 text-sm font-medium flex items-center gap-1 transition-colors">
                   <MdArrowBack size={16} /> Kembali ke Sepakbola
                 </Link>
@@ -369,13 +428,52 @@ export default function FootballPlayerClient({ fixtureId }) {
           )}
         </div>
 
+        {/* SERVER SELECTOR */}
+        {isPlaying && (hasStream || bohoSources.length > 0) && (
+          <div className="mb-4 rounded-xl p-3 sm:p-4" style={{ backgroundColor: '#1a1d27' }}>
+            <div className="flex items-center gap-2 mb-3">
+              <HiSignal size={14} className="text-emerald-400" />
+              <span className="text-white text-xs sm:text-sm font-semibold">Pilih Server</span>
+              <span className="text-gray-600 text-[10px]">({totalServers} tersedia)</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {hasStream && (
+                <button
+                  onClick={() => startStream(actualStreamId, streamProvider)}
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${activeServer?.type === 'sphere' ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/20' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+                  style={activeServer?.type !== 'sphere' ? { backgroundColor: '#232733' } : {}}
+                >
+                  <span className={`w-1.5 h-1.5 rounded-full ${activeServer?.type === 'sphere' ? 'bg-white' : 'bg-gray-600'}`}></span>
+                  Utama (Sphere)
+                </button>
+              )}
+              {bohoSources.map((src) => {
+                const isActive = activeServer?.type === 'boho' && activeServer?.streamNo === src.streamNo;
+                return (
+                  <button
+                    key={`boho-${src.streamNo}`}
+                    onClick={() => startBohoStream(src)}
+                    className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${isActive ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/20' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+                    style={!isActive ? { backgroundColor: '#232733' } : {}}
+                  >
+                    <span className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-white' : 'bg-gray-600'}`}></span>
+                    Server {src.streamNo}
+                    {src.hd && <span className="text-[9px] px-1 py-0.5 rounded bg-yellow-500/20 text-yellow-400 font-bold">HD</span>}
+                    {src.language && src.language !== 'Multi' && <span className="text-[9px] text-gray-500">{src.language}</span>}
+                  </button>
+                );
+              })}
+              <button onClick={refreshStream} className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium text-gray-400 hover:text-white transition-all ml-auto" style={{ backgroundColor: '#232733' }}>
+                <svg viewBox="0 0 24 24" fill="currentColor" className="w-3 h-3"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z" /></svg>
+                Refresh
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* MAIN CONTENT */}
         <div className="flex flex-col lg:flex-row gap-5">
-
-          {/* Left Column */}
           <div className="w-full lg:w-3/4 space-y-4">
-
-            {/* Breadcrumb */}
             <nav className="text-sm text-gray-500 hidden sm:block">
               <ol className="flex items-center gap-2">
                 <li><Link href="/" className="hover:text-gray-300 flex items-center gap-1 transition-colors"><IoHome size={13} /> Home</Link></li>
@@ -385,8 +483,6 @@ export default function FootballPlayerClient({ fixtureId }) {
                 <li className="text-gray-400 truncate max-w-[200px]">{matchTitle}</li>
               </ol>
             </nav>
-
-            {/* Match Info Card */}
             <div className="rounded-xl p-4" style={{ backgroundColor: '#1a1d27' }}>
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
@@ -407,38 +503,29 @@ export default function FootballPlayerClient({ fixtureId }) {
                 )}
               </div>
             </div>
-
-            {/* Share */}
             <div className="rounded-xl p-4" style={{ backgroundColor: '#1a1d27' }}>
               <h3 className="text-white font-semibold mb-3 flex items-center gap-2 text-sm">
                 <MdShare size={16} className="text-gray-400" /> Bagikan
               </h3>
               <div className="flex flex-wrap gap-2">
-                <a href={`https://wa.me/?text=${encodeURIComponent(shareText + ' ' + shareUrl)}`} target="_blank"
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors text-white" style={{ backgroundColor: '#25D366' }}>
+                <a href={`https://wa.me/?text=${encodeURIComponent(shareText + ' ' + shareUrl)}`} target="_blank" className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors text-white" style={{ backgroundColor: '#25D366' }}>
                   <FaWhatsapp size={14} /> <span className="hidden sm:inline">WhatsApp</span>
                 </a>
-                <a href={`https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}`} target="_blank"
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors text-white" style={{ backgroundColor: '#0088cc' }}>
+                <a href={`https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}`} target="_blank" className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors text-white" style={{ backgroundColor: '#0088cc' }}>
                   <FaTelegram size={14} /> <span className="hidden sm:inline">Telegram</span>
                 </a>
-                <a href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}`} target="_blank"
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors text-white" style={{ backgroundColor: '#1DA1F2' }}>
+                <a href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}`} target="_blank" className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors text-white" style={{ backgroundColor: '#1DA1F2' }}>
                   <FaTwitter size={14} /> <span className="hidden sm:inline">Twitter</span>
                 </a>
-                <a href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`} target="_blank"
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors text-white" style={{ backgroundColor: '#1877F2' }}>
+                <a href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`} target="_blank" className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors text-white" style={{ backgroundColor: '#1877F2' }}>
                   <FaFacebook size={14} /> <span className="hidden sm:inline">Facebook</span>
                 </a>
-                <button onClick={copyLink}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors text-gray-300" style={{ backgroundColor: '#232733' }}>
+                <button onClick={copyLink} className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors text-gray-300" style={{ backgroundColor: '#232733' }}>
                   {copied ? <MdCheck size={14} className="text-emerald-400" /> : <MdContentCopy size={14} />}
                   <span className="hidden sm:inline">{copied ? 'Copied!' : 'Copy'}</span>
                 </button>
               </div>
             </div>
-
-            {/* SEO */}
             <div className="rounded-xl p-4 hidden sm:block" style={{ backgroundColor: '#1a1d27' }}>
               <h2 className="text-base font-semibold text-white mb-2">Streaming {league.name} Gratis</h2>
               <p className="text-gray-500 text-sm leading-relaxed">
@@ -447,7 +534,6 @@ export default function FootballPlayerClient({ fixtureId }) {
             </div>
           </div>
 
-          {/* Sidebar */}
           <div className="w-full lg:w-1/4">
             <div className="rounded-xl p-4 lg:sticky lg:top-32" style={{ backgroundColor: '#1a1d27' }}>
               <h3 className="text-white font-semibold mb-4 flex items-center gap-2 text-sm">
@@ -457,18 +543,10 @@ export default function FootballPlayerClient({ fixtureId }) {
                 </span>
                 Sedang Live
               </h3>
-
               {relatedMatches.length > 0 ? (
                 <div className="space-y-2">
                   {relatedMatches.map((match, index) => (
-                    <Link
-                      key={match.id || index}
-                      href={`/football/${match.id}?stream=${match.stream?.id}&provider=${match.stream?.provider || 'sphere'}`}
-                      className="block rounded-lg p-3 transition-colors"
-                      style={{ backgroundColor: '#232733' }}
-                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#2a2e3a'}
-                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#232733'}
-                    >
+                    <Link key={match.id || index} href={`/football/${match.id}?stream=${match.stream?.id}&provider=${match.stream?.provider || 'sphere'}`} className="block rounded-lg p-3 transition-colors" style={{ backgroundColor: '#232733' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#2a2e3a'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#232733'}>
                       <div className="flex items-center gap-2 mb-1">
                         <img src={match.homeTeam?.logo} alt="" className="w-4 h-4 object-contain" onError={(e) => e.target.src = 'https://placehold.co/16x16/232733/6b7280?text=T'} />
                         <span className="text-gray-300 text-xs truncate flex-1">{match.homeTeam?.name}</span>
@@ -492,7 +570,6 @@ export default function FootballPlayerClient({ fixtureId }) {
               ) : (
                 <p className="text-gray-600 text-xs">Tidak ada pertandingan live lainnya</p>
               )}
-
               <div className="mt-5 pt-4" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
                 <h4 className="text-white font-semibold mb-3 text-xs uppercase tracking-wider">Quick Links</h4>
                 <div className="space-y-2">
@@ -509,7 +586,6 @@ export default function FootballPlayerClient({ fixtureId }) {
         </div>
       </div>
 
-      {/* Bottom Nav Mobile */}
       <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden" style={{ backgroundColor: '#0a0c14', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
         <div className="flex justify-around items-center py-2.5 px-1">
           <Link href="/" className="flex flex-col items-center px-3 py-1 text-gray-500 hover:text-emerald-400 transition-colors">

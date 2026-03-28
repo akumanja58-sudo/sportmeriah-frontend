@@ -10,6 +10,7 @@ import { MdSportsSoccer, MdSportsBasketball, MdPlayArrow, MdArrowForward, MdLive
 import { HiSignal, HiClock, HiTrophy, HiChevronRight } from 'react-icons/hi2';
 
 const API_URL = 'https://sportmeriah-backend-production.up.railway.app';
+const BOHO_API = 'https://sport-meriah.com/debug.php';
 
 const PRIORITY_LEAGUES = [
     'UEFA Champions League', 'UEFA Europa League', 'UEFA Europa Conference League',
@@ -24,6 +25,12 @@ function formatKickoffTime(dateString) {
     return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')} WIB`;
 }
 
+function formatBohoKickoff(timestamp) {
+    if (!timestamp || timestamp === 0) return 'LIVE 24/7';
+    const date = new Date(timestamp);
+    return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')} WIB`;
+}
+
 function sortByLeaguePriority(matches) {
     return [...matches].sort((a, b) => {
         const priorityA = PRIORITY_LEAGUES.findIndex(l => (a.league?.name || '') === l);
@@ -31,7 +38,28 @@ function sortByLeaguePriority(matches) {
         if (priorityA !== -1 && priorityB !== -1) return priorityA - priorityB;
         if (priorityA !== -1) return -1;
         if (priorityB !== -1) return 1;
-        return new Date(a.date) - new Date(b.date);
+        return new Date(a.date || 0) - new Date(b.date || 0);
+    });
+}
+
+// Normalize team name for matching (e.g. "Manchester United" -> "united")
+function normalizeTeam(name) {
+    if (!name) return '';
+    return name.toLowerCase()
+        .replace(/fc|cf|sc|ac|as|ss|us|rc|cd|ud|rcd|ca|se|sv|vfb|vfl|tsg|rb|bsc|fk|sk|nk|gfc/gi, '')
+        .trim()
+        .split(' ')
+        .pop() || '';
+}
+
+// Check if BOHOSport match already exists in Sphere matches
+function isDuplicate(bohoMatch, sphereMatches) {
+    const bohoTitle = (bohoMatch.title || '').toLowerCase();
+    return sphereMatches.some(sm => {
+        const homeNorm = normalizeTeam(sm.homeTeam?.name);
+        const awayNorm = normalizeTeam(sm.awayTeam?.name);
+        if (!homeNorm || !awayNorm) return false;
+        return bohoTitle.includes(homeNorm) && bohoTitle.includes(awayNorm);
     });
 }
 
@@ -39,37 +67,87 @@ export default function FootballPageClient() {
     const [liveMatches, setLiveMatches] = useState([]);
     const [upcomingMatches, setUpcomingMatches] = useState([]);
     const [extraChannels, setExtraChannels] = useState([]);
+    const [bohoLiveMatches, setBohoLiveMatches] = useState([]);
+    const [bohoUpcomingMatches, setBohoUpcomingMatches] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [stats, setStats] = useState({ live: 0, upcoming: 0, extra: 0, total: 0 });
+    const [stats, setStats] = useState({ live: 0, upcoming: 0, extra: 0, bohoLive: 0, bohoUpcoming: 0, total: 0 });
 
     useEffect(() => {
-        fetchMatches();
-        const interval = setInterval(fetchMatches, 60000);
+        fetchAllMatches();
+        const interval = setInterval(fetchAllMatches, 60000);
         return () => clearInterval(interval);
     }, []);
 
-    const fetchMatches = async () => {
+    const fetchAllMatches = async () => {
         try {
-            const res = await fetch(`${API_URL}/api/football`);
-            const data = await res.json();
-            if (data.success) {
-                const liveWithStream = (data.matches?.live || []).filter(m => m.hasStream || m.stream?.id);
-                const upcomingWithStream = (data.matches?.upcoming || []).filter(m => m.hasStream || m.stream?.id);
-                setLiveMatches(sortByLeaguePriority(liveWithStream));
-                setUpcomingMatches(sortByLeaguePriority(upcomingWithStream));
-                setExtraChannels(data.extraChannels || []);
-                setStats({
-                    live: liveWithStream.length,
-                    upcoming: upcomingWithStream.length,
-                    extra: (data.extraChannels || []).length,
-                    total: liveWithStream.length + upcomingWithStream.length + (data.extraChannels || []).length
-                });
-            }
+            const [sphereData, bohoData] = await Promise.allSettled([
+                fetchSphereMatches(),
+                fetchBohoMatches(),
+            ]);
+
+            const sphere = sphereData.status === 'fulfilled' ? sphereData.value : { live: [], upcoming: [], extra: [] };
+            const boho = bohoData.status === 'fulfilled' ? bohoData.value : { live: [], upcoming: [] };
+
+            // Deduplicate BOHOSport matches
+            const allSphereMatches = [...sphere.live, ...sphere.upcoming];
+            const filteredBohoLive = boho.live.filter(bm => !isDuplicate(bm, allSphereMatches));
+            const filteredBohoUpcoming = boho.upcoming.filter(bm => !isDuplicate(bm, allSphereMatches));
+
+            setLiveMatches(sortByLeaguePriority(sphere.live));
+            setUpcomingMatches(sortByLeaguePriority(sphere.upcoming));
+            setExtraChannels(sphere.extra);
+            setBohoLiveMatches(filteredBohoLive);
+            setBohoUpcomingMatches(filteredBohoUpcoming);
+
+            setStats({
+                live: sphere.live.length + filteredBohoLive.length,
+                upcoming: sphere.upcoming.length + filteredBohoUpcoming.length,
+                extra: sphere.extra.length,
+                bohoLive: filteredBohoLive.length,
+                bohoUpcoming: filteredBohoUpcoming.length,
+                total: sphere.live.length + sphere.upcoming.length + sphere.extra.length + filteredBohoLive.length + filteredBohoUpcoming.length,
+            });
         } catch (error) {
             console.error('Failed to fetch matches:', error);
         } finally {
             setLoading(false);
         }
+    };
+
+    const fetchSphereMatches = async () => {
+        const res = await fetch(`${API_URL}/api/football`);
+        const data = await res.json();
+        if (!data.success) return { live: [], upcoming: [], extra: [] };
+        return {
+            live: (data.matches?.live || []).filter(m => m.hasStream || m.stream?.id),
+            upcoming: (data.matches?.upcoming || []).filter(m => m.hasStream || m.stream?.id),
+            extra: data.extraChannels || [],
+        };
+    };
+
+    const fetchBohoMatches = async () => {
+        const res = await fetch(`${BOHO_API}?action=matches&sport=football`);
+        const data = await res.json();
+        if (!data?.data) return { live: [], upcoming: [] };
+
+        const now = Date.now();
+        const threeHoursAgo = now - (3 * 60 * 60 * 1000);
+        const live = [];
+        const upcoming = [];
+
+        data.data.forEach(match => {
+            const time = match.date || 0;
+            if (time === 0 || (time > threeHoursAgo && time <= now)) {
+                live.push(match);
+            } else if (time > now) {
+                upcoming.push(match);
+            }
+        });
+
+        // Sort upcoming by time
+        upcoming.sort((a, b) => (a.date || 0) - (b.date || 0));
+
+        return { live, upcoming: upcoming.slice(0, 20) }; // Limit upcoming to 20
     };
 
     return (
@@ -146,15 +224,11 @@ export default function FootballPageClient() {
                                     <span className="loader"></span>
                                 </div>
                                 <p className="text-gray-500 text-sm">Memuat jadwal pertandingan...</p>
-                                <style>{`
-                                    .loader { width: 40px; height: 40px; border-radius: 50%; display: inline-block; border-top: 3px solid #fff; border-right: 3px solid transparent; box-sizing: border-box; animation: rot 1s linear infinite; position: relative; }
-                                    .loader::after { content: ''; box-sizing: border-box; position: absolute; left: 0; top: 0; width: 40px; height: 40px; border-radius: 50%; border-left: 3px solid #10b981; border-bottom: 3px solid transparent; animation: rot 0.5s linear infinite reverse; }
-                                    @keyframes rot { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-                                `}</style>
+                                <style>{`.loader{width:40px;height:40px;border-radius:50%;display:inline-block;border-top:3px solid #fff;border-right:3px solid transparent;box-sizing:border-box;animation:rot 1s linear infinite;position:relative}.loader::after{content:'';box-sizing:border-box;position:absolute;left:0;top:0;width:40px;height:40px;border-radius:50%;border-left:3px solid #10b981;border-bottom:3px solid transparent;animation:rot .5s linear infinite reverse}@keyframes rot{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}`}</style>
                             </div>
                         ) : (
                             <>
-                                {/* LIVE */}
+                                {/* LIVE - Sphere */}
                                 {liveMatches.length > 0 && (
                                     <section>
                                         <div className="flex items-center gap-3 mb-4">
@@ -173,7 +247,27 @@ export default function FootballPageClient() {
                                     </section>
                                 )}
 
-                                {/* UPCOMING */}
+                                {/* LIVE - BOHOSport */}
+                                {bohoLiveMatches.length > 0 && (
+                                    <section>
+                                        <div className="flex items-center gap-3 mb-4">
+                                            <span className="relative flex h-2.5 w-2.5">
+                                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
+                                            </span>
+                                            <h2 className="text-white font-bold text-lg">Sedang Tayang</h2>
+                                            <span className="text-xs text-emerald-400 px-2.5 py-0.5 rounded-full font-medium" style={{ backgroundColor: 'rgba(16,185,129,0.1)' }}>Multi Server</span>
+                                            <span className="text-xs text-gray-500 px-2.5 py-0.5 rounded-full font-medium" style={{ backgroundColor: '#232733' }}>{bohoLiveMatches.length}</span>
+                                        </div>
+                                        <div className="space-y-2">
+                                            {bohoLiveMatches.map((match, index) => (
+                                                <BohoMatchCard key={`boho-live-${match.id || index}`} match={match} isLive={true} />
+                                            ))}
+                                        </div>
+                                    </section>
+                                )}
+
+                                {/* UPCOMING - Sphere */}
                                 {upcomingMatches.length > 0 && (
                                     <section>
                                         <div className="flex items-center gap-3 mb-4">
@@ -184,6 +278,23 @@ export default function FootballPageClient() {
                                         <div className="space-y-2">
                                             {upcomingMatches.map((match, index) => (
                                                 <MatchCard key={`upcoming-${match.id || index}`} match={match} isLive={false} />
+                                            ))}
+                                        </div>
+                                    </section>
+                                )}
+
+                                {/* UPCOMING - BOHOSport */}
+                                {bohoUpcomingMatches.length > 0 && (
+                                    <section>
+                                        <div className="flex items-center gap-3 mb-4">
+                                            <MdSportsSoccer size={18} className="text-emerald-500" />
+                                            <h2 className="text-white font-bold text-lg">Akan Datang</h2>
+                                            <span className="text-xs text-emerald-400 px-2.5 py-0.5 rounded-full font-medium" style={{ backgroundColor: 'rgba(16,185,129,0.1)' }}>Multi Server</span>
+                                            <span className="text-xs text-gray-500 px-2.5 py-0.5 rounded-full font-medium" style={{ backgroundColor: '#232733' }}>{bohoUpcomingMatches.length}</span>
+                                        </div>
+                                        <div className="space-y-2">
+                                            {bohoUpcomingMatches.map((match, index) => (
+                                                <BohoMatchCard key={`boho-upcoming-${match.id || index}`} match={match} isLive={false} />
                                             ))}
                                         </div>
                                     </section>
@@ -206,7 +317,7 @@ export default function FootballPageClient() {
                                 )}
 
                                 {/* EMPTY */}
-                                {liveMatches.length === 0 && upcomingMatches.length === 0 && extraChannels.length === 0 && (
+                                {liveMatches.length === 0 && upcomingMatches.length === 0 && extraChannels.length === 0 && bohoLiveMatches.length === 0 && bohoUpcomingMatches.length === 0 && (
                                     <div className="rounded-xl p-12 text-center" style={{ backgroundColor: '#1a1d27' }}>
                                         <MdSportsSoccer size={40} className="text-gray-600 mx-auto mb-4" />
                                         <p className="text-gray-400 font-medium">Tidak ada stream tersedia saat ini</p>
@@ -244,7 +355,7 @@ export default function FootballPageClient() {
     );
 }
 
-// ========== MATCH CARD ==========
+// ========== SPHERE MATCH CARD (existing) ==========
 function MatchCard({ match, isLive }) {
     const { homeTeam, awayTeam, league, score, stream, date, elapsed, id: fixtureId } = match;
     const streamId = stream?.id;
@@ -258,7 +369,6 @@ function MatchCard({ match, isLive }) {
                 onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#1e2130'}
                 onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#1a1d27'}>
 
-                {/* Header */}
                 <div className="flex justify-between items-center px-4 py-2 text-xs" style={{ backgroundColor: '#151720' }}>
                     <span className={`font-medium flex items-center gap-1.5 ${isLive ? 'text-red-400' : 'text-gray-500'}`}>
                         {isLive ? (
@@ -279,7 +389,6 @@ function MatchCard({ match, isLive }) {
                     </span>
                 </div>
 
-                {/* Match */}
                 <div className="flex items-center justify-between px-4 py-3 gap-2">
                     <div className="flex items-center gap-2.5 flex-1 min-w-0 justify-end">
                         <span className="text-white text-sm font-medium truncate text-right">{homeTeam?.name || 'Home'}</span>
@@ -295,6 +404,76 @@ function MatchCard({ match, isLive }) {
                     <div className="flex items-center gap-2.5 flex-1 min-w-0">
                         <img src={awayTeam?.logo} alt={awayTeam?.name} className="w-7 h-7 object-contain flex-shrink-0" onError={(e) => e.target.src = 'https://placehold.co/28x28/232733/6b7280?text=T'} />
                         <span className="text-white text-sm font-medium truncate">{awayTeam?.name || 'Away'}</span>
+                    </div>
+                    <div className="flex-shrink-0 ml-3">
+                        <span className="text-white text-xs font-semibold px-3.5 py-1.5 rounded-md inline-flex items-center gap-1" style={{ backgroundColor: isLive ? '#dc2626' : '#10b981' }}>
+                            <MdPlayArrow size={14} /> {isLive ? 'Live' : 'Tonton'}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </Link>
+    );
+}
+
+// ========== BOHOSPORT MATCH CARD ==========
+function BohoMatchCard({ match, isLive }) {
+    const homeName = match.teams?.home?.name || match.title?.split(' vs ')[0] || 'Home';
+    const awayName = match.teams?.away?.name || match.title?.split(' vs ')[1] || 'Away';
+    const homeBadge = match.teams?.home?.badge || '';
+    const awayBadge = match.teams?.away?.badge || '';
+    const matchUrl = `/football/boho/${match.id}`;
+
+    return (
+        <Link href={matchUrl}>
+            <div className="rounded-lg overflow-hidden transition-all cursor-pointer group border"
+                style={{ backgroundColor: '#1a1d27', borderColor: isLive ? 'rgba(239,68,68,0.2)' : 'transparent' }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#1e2130'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#1a1d27'}>
+
+                <div className="flex justify-between items-center px-4 py-2 text-xs" style={{ backgroundColor: '#151720' }}>
+                    <span className={`font-medium flex items-center gap-1.5 ${isLive ? 'text-red-400' : 'text-gray-500'}`}>
+                        {isLive ? (
+                            <>
+                                <span className="relative flex h-1.5 w-1.5">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-red-500"></span>
+                                </span>
+                                LIVE
+                            </>
+                        ) : (
+                            <><HiClock size={12} /> {formatBohoKickoff(match.date)}</>
+                        )}
+                    </span>
+                    <span className="text-gray-500 truncate max-w-[180px] flex items-center gap-1.5">
+                        <MdSportsSoccer size={12} className="text-emerald-500" />
+                        {match.category || 'Football'}
+                    </span>
+                </div>
+
+                <div className="flex items-center justify-between px-4 py-3 gap-2">
+                    <div className="flex items-center gap-2.5 flex-1 min-w-0 justify-end">
+                        <span className="text-white text-sm font-medium truncate text-right">{homeName}</span>
+                        {homeBadge ? (
+                            <img src={homeBadge} alt={homeName} className="w-7 h-7 object-contain flex-shrink-0" onError={(e) => e.target.src = 'https://placehold.co/28x28/232733/6b7280?text=T'} />
+                        ) : (
+                            <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: '#232733' }}>
+                                <MdSportsSoccer size={14} className="text-emerald-500" />
+                            </div>
+                        )}
+                    </div>
+                    <div className="flex-shrink-0 px-3 min-w-[52px] text-center">
+                        <span className="text-gray-600 text-xs font-bold tracking-widest">VS</span>
+                    </div>
+                    <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                        {awayBadge ? (
+                            <img src={awayBadge} alt={awayName} className="w-7 h-7 object-contain flex-shrink-0" onError={(e) => e.target.src = 'https://placehold.co/28x28/232733/6b7280?text=T'} />
+                        ) : (
+                            <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: '#232733' }}>
+                                <MdSportsSoccer size={14} className="text-emerald-500" />
+                            </div>
+                        )}
+                        <span className="text-white text-sm font-medium truncate">{awayName}</span>
                     </div>
                     <div className="flex-shrink-0 ml-3">
                         <span className="text-white text-xs font-semibold px-3.5 py-1.5 rounded-md inline-flex items-center gap-1" style={{ backgroundColor: isLive ? '#dc2626' : '#10b981' }}>

@@ -10,6 +10,7 @@ import { MdSportsSoccer, MdSportsBasketball, MdPlayArrow, MdLiveTv } from 'react
 import { HiSignal, HiClock } from 'react-icons/hi2';
 
 const API_URL = 'https://sportmeriah-backend-production.up.railway.app';
+const BOHO_API = 'https://sport-meriah.com/debug.php';
 
 function formatKickoffTime(dateString) {
     if (!dateString) return '-';
@@ -17,36 +18,70 @@ function formatKickoffTime(dateString) {
     return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')} WIB`;
 }
 
+function formatBohoKickoff(timestamp) {
+    if (!timestamp || timestamp === 0) return 'LIVE 24/7';
+    const date = new Date(timestamp);
+    return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')} WIB`;
+}
+
+function normalizeTeam(name) {
+    if (!name) return '';
+    return name.toLowerCase()
+        .replace(/fc|sc|bc/gi, '')
+        .trim()
+        .split(' ')
+        .pop() || '';
+}
+
+function isDuplicate(bohoMatch, sphereMatches) {
+    const bohoTitle = (bohoMatch.title || '').toLowerCase();
+    return sphereMatches.some(sm => {
+        const homeNorm = normalizeTeam(sm.homeTeam?.name);
+        const awayNorm = normalizeTeam(sm.awayTeam?.name);
+        if (!homeNorm || !awayNorm) return false;
+        return bohoTitle.includes(homeNorm) && bohoTitle.includes(awayNorm);
+    });
+}
+
 export default function BasketballPageClient() {
     const [matches, setMatches] = useState({ live: [], upcoming: [], finished: [] });
     const [extraChannels, setExtraChannels] = useState([]);
+    const [bohoLiveMatches, setBohoLiveMatches] = useState([]);
+    const [bohoUpcomingMatches, setBohoUpcomingMatches] = useState([]);
     const [loading, setLoading] = useState(true);
     const [stats, setStats] = useState({ total: 0, live: 0, upcoming: 0, withStreams: 0 });
 
     useEffect(() => {
-        fetchMatches();
-        const interval = setInterval(fetchMatches, 60000);
+        fetchAllMatches();
+        const interval = setInterval(fetchAllMatches, 60000);
         return () => clearInterval(interval);
     }, []);
 
-    const fetchMatches = async () => {
+    const fetchAllMatches = async () => {
         try {
-            const res = await fetch(`${API_URL}/api/basketball`);
-            const data = await res.json();
-            if (data.success) {
-                setMatches({
-                    live: data.matches?.live || [],
-                    upcoming: data.matches?.upcoming || [],
-                    finished: data.matches?.finished || []
-                });
-                setExtraChannels(data.extraChannels || []);
-                setStats({
-                    total: data.stats?.total || 0,
-                    live: data.stats?.live || 0,
-                    upcoming: data.stats?.upcoming || 0,
-                    withStreams: data.stats?.withStreams || 0
-                });
-            }
+            const [sphereData, bohoData] = await Promise.allSettled([
+                fetchSphereMatches(),
+                fetchBohoMatches(),
+            ]);
+
+            const sphere = sphereData.status === 'fulfilled' ? sphereData.value : { live: [], upcoming: [], finished: [], extra: [] };
+            const boho = bohoData.status === 'fulfilled' ? bohoData.value : { live: [], upcoming: [] };
+
+            const allSphereMatches = [...sphere.live, ...sphere.upcoming];
+            const filteredBohoLive = boho.live.filter(bm => !isDuplicate(bm, allSphereMatches));
+            const filteredBohoUpcoming = boho.upcoming.filter(bm => !isDuplicate(bm, allSphereMatches));
+
+            setMatches({ live: sphere.live, upcoming: sphere.upcoming, finished: sphere.finished });
+            setExtraChannels(sphere.extra);
+            setBohoLiveMatches(filteredBohoLive);
+            setBohoUpcomingMatches(filteredBohoUpcoming);
+
+            setStats({
+                total: sphere.live.length + sphere.upcoming.length + sphere.finished.length + filteredBohoLive.length + filteredBohoUpcoming.length,
+                live: sphere.live.length + filteredBohoLive.length,
+                upcoming: sphere.upcoming.length + filteredBohoUpcoming.length,
+                withStreams: sphere.live.length + sphere.upcoming.length + sphere.extra.length + filteredBohoLive.length + filteredBohoUpcoming.length,
+            });
         } catch (error) {
             console.error('Failed to fetch matches:', error);
         } finally {
@@ -54,13 +89,45 @@ export default function BasketballPageClient() {
         }
     };
 
+    const fetchSphereMatches = async () => {
+        const res = await fetch(`${API_URL}/api/basketball`);
+        const data = await res.json();
+        if (!data.success) return { live: [], upcoming: [], finished: [], extra: [] };
+        return {
+            live: data.matches?.live || [],
+            upcoming: data.matches?.upcoming || [],
+            finished: data.matches?.finished || [],
+            extra: data.extraChannels || [],
+        };
+    };
+
+    const fetchBohoMatches = async () => {
+        const res = await fetch(`${BOHO_API}?action=matches&sport=basketball`);
+        const data = await res.json();
+        if (!data?.data) return { live: [], upcoming: [] };
+
+        const now = Date.now();
+        const threeHoursAgo = now - (3 * 60 * 60 * 1000);
+        const live = [];
+        const upcoming = [];
+
+        data.data.forEach(match => {
+            const time = match.date || 0;
+            if (time === 0 || (time > threeHoursAgo && time <= now)) {
+                live.push(match);
+            } else if (time > now) {
+                upcoming.push(match);
+            }
+        });
+
+        upcoming.sort((a, b) => (a.date || 0) - (b.date || 0));
+        return { live, upcoming: upcoming.slice(0, 20) };
+    };
+
     return (
         <main className="min-h-screen" style={{ backgroundColor: '#0a0c14' }}>
             <Navbar />
-
             <div className="container max-w-7xl mx-auto px-4 py-8">
-
-                {/* Header */}
                 <div className="flex items-center gap-3 mb-6">
                     <Link href="/" className="text-gray-500 hover:text-gray-300 transition-colors"><IoHome size={18} /></Link>
                     <span className="text-gray-700">/</span>
@@ -68,14 +135,9 @@ export default function BasketballPageClient() {
                         <MdSportsBasketball className="text-orange-500" /> Basketball
                     </h1>
                 </div>
-
                 <div className="flex flex-col lg:flex-row gap-8">
-
-                    {/* Sidebar */}
                     <aside className="w-full lg:w-72 order-2 lg:order-1 flex-shrink-0">
                         <div className="sticky top-32 space-y-5">
-
-                            {/* Stats */}
                             <div className="rounded-xl p-5" style={{ backgroundColor: '#1a1d27' }}>
                                 <h3 className="text-white font-semibold text-xs mb-4 flex items-center gap-2 uppercase tracking-widest">
                                     <MdSportsBasketball className="text-orange-500" size={14} /> Statistik
@@ -99,19 +161,13 @@ export default function BasketballPageClient() {
                                     </div>
                                 </div>
                             </div>
-
-                            {/* Quick Links */}
                             <div className="rounded-xl p-5" style={{ backgroundColor: '#1a1d27' }}>
                                 <h3 className="text-white font-semibold text-xs mb-4 uppercase tracking-widest">Quick Links</h3>
                                 <div className="space-y-1">
-                                    <Link href="/" className="flex items-center gap-2 px-3 py-2 rounded-lg text-gray-500 hover:text-gray-300 text-sm transition-colors"
-                                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#232733'}
-                                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
+                                    <Link href="/" className="flex items-center gap-2 px-3 py-2 rounded-lg text-gray-500 hover:text-gray-300 text-sm transition-colors" onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#232733'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
                                         <IoHome size={14} /> Beranda
                                     </Link>
-                                    <Link href="/football" className="flex items-center gap-2 px-3 py-2 rounded-lg text-gray-500 hover:text-emerald-400 text-sm transition-colors"
-                                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#232733'}
-                                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
+                                    <Link href="/football" className="flex items-center gap-2 px-3 py-2 rounded-lg text-gray-500 hover:text-emerald-400 text-sm transition-colors" onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#232733'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
                                         <MdSportsSoccer size={14} /> Sepakbola
                                     </Link>
                                 </div>
@@ -119,43 +175,41 @@ export default function BasketballPageClient() {
                         </div>
                     </aside>
 
-                    {/* Main Content */}
                     <div className="flex-1 order-1 lg:order-2 space-y-6">
-
                         {loading ? (
                             <div className="rounded-xl p-12 text-center" style={{ backgroundColor: '#1a1d27' }}>
-                                <div className="flex justify-center mb-4">
-                                    <span className="loader"></span>
-                                </div>
+                                <div className="flex justify-center mb-4"><span className="loader"></span></div>
                                 <p className="text-gray-500 text-sm">Memuat jadwal pertandingan...</p>
-                                <style>{`
-                                    .loader { width: 40px; height: 40px; border-radius: 50%; display: inline-block; border-top: 3px solid #fff; border-right: 3px solid transparent; box-sizing: border-box; animation: rot 1s linear infinite; position: relative; }
-                                    .loader::after { content: ''; box-sizing: border-box; position: absolute; left: 0; top: 0; width: 40px; height: 40px; border-radius: 50%; border-left: 3px solid #f97316; border-bottom: 3px solid transparent; animation: rot 0.5s linear infinite reverse; }
-                                    @keyframes rot { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-                                `}</style>
+                                <style>{`.loader{width:40px;height:40px;border-radius:50%;display:inline-block;border-top:3px solid #fff;border-right:3px solid transparent;box-sizing:border-box;animation:rot 1s linear infinite;position:relative}.loader::after{content:'';box-sizing:border-box;position:absolute;left:0;top:0;width:40px;height:40px;border-radius:50%;border-left:3px solid #f97316;border-bottom:3px solid transparent;animation:rot .5s linear infinite reverse}@keyframes rot{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}`}</style>
                             </div>
                         ) : (
                             <>
-                                {/* LIVE */}
+                                {/* LIVE - Sphere */}
                                 {matches.live.length > 0 && (
                                     <section>
                                         <div className="flex items-center gap-3 mb-4">
-                                            <span className="relative flex h-2.5 w-2.5">
-                                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                                                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
-                                            </span>
+                                            <span className="relative flex h-2.5 w-2.5"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span></span>
                                             <h2 className="text-white font-bold text-lg">Live Now</h2>
                                             <span className="text-xs text-gray-500 px-2.5 py-0.5 rounded-full font-medium" style={{ backgroundColor: '#232733' }}>{matches.live.length}</span>
                                         </div>
-                                        <div className="space-y-2">
-                                            {matches.live.map((match) => (
-                                                <MatchCard key={match.id} match={match} isLive={true} />
-                                            ))}
-                                        </div>
+                                        <div className="space-y-2">{matches.live.map((match) => <MatchCard key={match.id} match={match} isLive={true} />)}</div>
                                     </section>
                                 )}
 
-                                {/* UPCOMING */}
+                                {/* LIVE - BOHOSport */}
+                                {bohoLiveMatches.length > 0 && (
+                                    <section>
+                                        <div className="flex items-center gap-3 mb-4">
+                                            <span className="relative flex h-2.5 w-2.5"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span></span>
+                                            <h2 className="text-white font-bold text-lg">Live Now</h2>
+                                            <span className="text-xs text-orange-400 px-2.5 py-0.5 rounded-full font-medium" style={{ backgroundColor: 'rgba(249,115,22,0.1)' }}>Multi Server</span>
+                                            <span className="text-xs text-gray-500 px-2.5 py-0.5 rounded-full font-medium" style={{ backgroundColor: '#232733' }}>{bohoLiveMatches.length}</span>
+                                        </div>
+                                        <div className="space-y-2">{bohoLiveMatches.map((match, i) => <BohoMatchCard key={`boho-live-${match.id || i}`} match={match} isLive={true} />)}</div>
+                                    </section>
+                                )}
+
+                                {/* UPCOMING - Sphere */}
                                 {matches.upcoming.length > 0 && (
                                     <section>
                                         <div className="flex items-center gap-3 mb-4">
@@ -163,11 +217,20 @@ export default function BasketballPageClient() {
                                             <h2 className="text-white font-bold text-lg">Upcoming</h2>
                                             <span className="text-xs text-gray-500 px-2.5 py-0.5 rounded-full font-medium" style={{ backgroundColor: '#232733' }}>{matches.upcoming.length}</span>
                                         </div>
-                                        <div className="space-y-2">
-                                            {matches.upcoming.map((match) => (
-                                                <MatchCard key={match.id} match={match} isLive={false} />
-                                            ))}
+                                        <div className="space-y-2">{matches.upcoming.map((match) => <MatchCard key={match.id} match={match} isLive={false} />)}</div>
+                                    </section>
+                                )}
+
+                                {/* UPCOMING - BOHOSport */}
+                                {bohoUpcomingMatches.length > 0 && (
+                                    <section>
+                                        <div className="flex items-center gap-3 mb-4">
+                                            <HiClock size={18} className="text-orange-400" />
+                                            <h2 className="text-white font-bold text-lg">Upcoming</h2>
+                                            <span className="text-xs text-orange-400 px-2.5 py-0.5 rounded-full font-medium" style={{ backgroundColor: 'rgba(249,115,22,0.1)' }}>Multi Server</span>
+                                            <span className="text-xs text-gray-500 px-2.5 py-0.5 rounded-full font-medium" style={{ backgroundColor: '#232733' }}>{bohoUpcomingMatches.length}</span>
                                         </div>
+                                        <div className="space-y-2">{bohoUpcomingMatches.map((match, i) => <BohoMatchCard key={`boho-up-${match.id || i}`} match={match} isLive={false} />)}</div>
                                     </section>
                                 )}
 
@@ -179,11 +242,7 @@ export default function BasketballPageClient() {
                                             <h2 className="text-white font-bold text-lg">Extra Channels</h2>
                                             <span className="text-xs text-gray-500 px-2.5 py-0.5 rounded-full font-medium" style={{ backgroundColor: '#232733' }}>{extraChannels.length}</span>
                                         </div>
-                                        <div className="space-y-2">
-                                            {extraChannels.map((channel) => (
-                                                <ChannelCard key={channel.id} channel={channel} />
-                                            ))}
-                                        </div>
+                                        <div className="space-y-2">{extraChannels.map((channel) => <ChannelCard key={channel.id} channel={channel} />)}</div>
                                     </section>
                                 )}
 
@@ -195,28 +254,21 @@ export default function BasketballPageClient() {
                                             <h2 className="text-gray-400 font-bold text-lg">Selesai</h2>
                                             <span className="text-xs text-gray-500 px-2.5 py-0.5 rounded-full font-medium" style={{ backgroundColor: '#232733' }}>{matches.finished.length}</span>
                                         </div>
-                                        <div className="space-y-2 opacity-60">
-                                            {matches.finished.map((match) => (
-                                                <MatchCard key={match.id} match={match} isLive={false} isFinished={true} />
-                                            ))}
-                                        </div>
+                                        <div className="space-y-2 opacity-60">{matches.finished.map((match) => <MatchCard key={match.id} match={match} isLive={false} isFinished={true} />)}</div>
                                     </section>
                                 )}
 
                                 {/* EMPTY */}
-                                {matches.live.length === 0 && matches.upcoming.length === 0 && matches.finished.length === 0 && (
+                                {matches.live.length === 0 && matches.upcoming.length === 0 && matches.finished.length === 0 && bohoLiveMatches.length === 0 && bohoUpcomingMatches.length === 0 && (
                                     <div className="rounded-xl p-12 text-center" style={{ backgroundColor: '#1a1d27' }}>
                                         <MdSportsBasketball size={40} className="text-gray-600 mx-auto mb-4" />
                                         <p className="text-gray-400 font-medium">Tidak ada pertandingan tersedia saat ini</p>
-                                        <Link href="/" className="text-orange-400 hover:text-orange-300 text-sm mt-4 inline-block">
-                                            Kembali ke Beranda
-                                        </Link>
+                                        <Link href="/" className="text-orange-400 hover:text-orange-300 text-sm mt-4 inline-block">Kembali ke Beranda</Link>
                                     </div>
                                 )}
                             </>
                         )}
 
-                        {/* SEO */}
                         <div className="mt-10 pt-8 space-y-3" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
                             <h2 className="text-lg font-semibold text-white">Nonton Streaming NBA Basketball Gratis</h2>
                             <p className="text-gray-500 text-sm leading-relaxed">
@@ -227,7 +279,6 @@ export default function BasketballPageClient() {
                 </div>
             </div>
 
-            {/* Bottom Nav */}
             <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden" style={{ backgroundColor: '#0a0c14', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
                 <div className="flex justify-around items-center py-2.5 px-1">
                     <Link href="/" className="flex flex-col items-center px-3 py-1 text-gray-500 hover:text-emerald-400 transition-colors"><IoHome size={20} /><span className="text-[10px] mt-1">Beranda</span></Link>
@@ -241,7 +292,7 @@ export default function BasketballPageClient() {
     );
 }
 
-// ========== MATCH CARD ==========
+// ========== SPHERE MATCH CARD ==========
 function MatchCard({ match, isLive, isFinished = false }) {
     const { homeTeam, awayTeam, league, score, stream, date, quarter, timer } = match;
     const hasStream = !!stream?.id;
@@ -260,57 +311,67 @@ function MatchCard({ match, isLive, isFinished = false }) {
                 style={{ backgroundColor: '#1a1d27', borderColor: isLive ? 'rgba(239,68,68,0.2)' : 'transparent' }}
                 onMouseEnter={(e) => { if (hasStream) e.currentTarget.style.backgroundColor = '#1e2130'; }}
                 onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#1a1d27'}>
-
-                {/* Header */}
                 <div className="flex justify-between items-center px-4 py-2 text-xs" style={{ backgroundColor: '#151720' }}>
                     <span className={`font-medium flex items-center gap-1.5 ${isLive ? 'text-red-400' : 'text-gray-500'}`}>
-                        {isLive ? (
-                            <>
-                                <span className="relative flex h-1.5 w-1.5">
-                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-red-500"></span>
-                                </span>
-                                {getQuarterDisplay()}
-                            </>
-                        ) : isFinished ? (
-                            <span className="text-gray-600">Selesai</span>
-                        ) : (
-                            <><HiClock size={12} /> {formatKickoffTime(date)}</>
-                        )}
+                        {isLive ? (<><span className="relative flex h-1.5 w-1.5"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span><span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-red-500"></span></span>{getQuarterDisplay()}</>) : isFinished ? (<span className="text-gray-600">Selesai</span>) : (<><HiClock size={12} /> {formatKickoffTime(date)}</>)}
                     </span>
-                    <span className="text-gray-500 truncate max-w-[180px] flex items-center gap-1.5">
-                        <MdSportsBasketball size={12} className="text-orange-500" />
-                        {league?.name || 'NBA'}
-                    </span>
+                    <span className="text-gray-500 truncate max-w-[180px] flex items-center gap-1.5"><MdSportsBasketball size={12} className="text-orange-500" />{league?.name || 'NBA'}</span>
                 </div>
-
-                {/* Match */}
                 <div className="flex items-center justify-between px-4 py-3 gap-2">
                     <div className="flex items-center gap-2.5 flex-1 min-w-0 justify-end">
                         <span className="text-white text-sm font-medium truncate text-right">{homeTeam?.name || 'Home'}</span>
                         <img src={homeTeam?.logo} alt={homeTeam?.name} className="w-7 h-7 object-contain flex-shrink-0" onError={(e) => e.target.src = 'https://placehold.co/28x28/232733/6b7280?text=T'} />
                     </div>
                     <div className="flex-shrink-0 px-3 min-w-[52px] text-center">
-                        {(isLive || isFinished) && score?.home !== null ? (
-                            <span className="text-white text-base font-bold tracking-wide">{score?.home ?? 0} — {score?.away ?? 0}</span>
-                        ) : (
-                            <span className="text-gray-600 text-xs font-bold tracking-widest">VS</span>
-                        )}
+                        {(isLive || isFinished) && score?.home !== null ? (<span className="text-white text-base font-bold tracking-wide">{score?.home ?? 0} — {score?.away ?? 0}</span>) : (<span className="text-gray-600 text-xs font-bold tracking-widest">VS</span>)}
                     </div>
                     <div className="flex items-center gap-2.5 flex-1 min-w-0">
                         <img src={awayTeam?.logo} alt={awayTeam?.name} className="w-7 h-7 object-contain flex-shrink-0" onError={(e) => e.target.src = 'https://placehold.co/28x28/232733/6b7280?text=T'} />
                         <span className="text-white text-sm font-medium truncate">{awayTeam?.name || 'Away'}</span>
                     </div>
                     <div className="flex-shrink-0 ml-3">
-                        {hasStream ? (
-                            <span className="text-white text-xs font-semibold px-3.5 py-1.5 rounded-md inline-flex items-center gap-1" style={{ backgroundColor: isLive ? '#dc2626' : isFinished ? '#374151' : '#f97316' }}>
-                                <MdPlayArrow size={14} /> {isLive ? 'Live' : isFinished ? 'Selesai' : 'Tonton'}
-                            </span>
-                        ) : (
-                            <span className="text-gray-500 text-xs font-medium px-3 py-1.5 rounded-md" style={{ backgroundColor: '#232733' }}>
-                                No Stream
-                            </span>
-                        )}
+                        {hasStream ? (<span className="text-white text-xs font-semibold px-3.5 py-1.5 rounded-md inline-flex items-center gap-1" style={{ backgroundColor: isLive ? '#dc2626' : isFinished ? '#374151' : '#f97316' }}><MdPlayArrow size={14} /> {isLive ? 'Live' : isFinished ? 'Selesai' : 'Tonton'}</span>) : (<span className="text-gray-500 text-xs font-medium px-3 py-1.5 rounded-md" style={{ backgroundColor: '#232733' }}>No Stream</span>)}
+                    </div>
+                </div>
+            </div>
+        </Link>
+    );
+}
+
+// ========== BOHOSPORT MATCH CARD ==========
+function BohoMatchCard({ match, isLive }) {
+    const homeName = match.teams?.home?.name || match.title?.split(' vs ')[0] || 'Home';
+    const awayName = match.teams?.away?.name || match.title?.split(' vs ')[1] || 'Away';
+    const homeBadge = match.teams?.home?.badge || '';
+    const awayBadge = match.teams?.away?.badge || '';
+    const matchUrl = `/basketball/boho/${match.id}`;
+
+    return (
+        <Link href={matchUrl}>
+            <div className="rounded-lg overflow-hidden transition-all cursor-pointer group border"
+                style={{ backgroundColor: '#1a1d27', borderColor: isLive ? 'rgba(239,68,68,0.2)' : 'transparent' }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#1e2130'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#1a1d27'}>
+                <div className="flex justify-between items-center px-4 py-2 text-xs" style={{ backgroundColor: '#151720' }}>
+                    <span className={`font-medium flex items-center gap-1.5 ${isLive ? 'text-red-400' : 'text-gray-500'}`}>
+                        {isLive ? (<><span className="relative flex h-1.5 w-1.5"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span><span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-red-500"></span></span>LIVE</>) : (<><HiClock size={12} /> {formatBohoKickoff(match.date)}</>)}
+                    </span>
+                    <span className="text-gray-500 truncate max-w-[180px] flex items-center gap-1.5"><MdSportsBasketball size={12} className="text-orange-500" />{match.category || 'Basketball'}</span>
+                </div>
+                <div className="flex items-center justify-between px-4 py-3 gap-2">
+                    <div className="flex items-center gap-2.5 flex-1 min-w-0 justify-end">
+                        <span className="text-white text-sm font-medium truncate text-right">{homeName}</span>
+                        {homeBadge ? (<img src={homeBadge} alt={homeName} className="w-7 h-7 object-contain flex-shrink-0" onError={(e) => e.target.src = 'https://placehold.co/28x28/232733/6b7280?text=T'} />) : (<div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: '#232733' }}><MdSportsBasketball size={14} className="text-orange-500" /></div>)}
+                    </div>
+                    <div className="flex-shrink-0 px-3 min-w-[52px] text-center"><span className="text-gray-600 text-xs font-bold tracking-widest">VS</span></div>
+                    <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                        {awayBadge ? (<img src={awayBadge} alt={awayName} className="w-7 h-7 object-contain flex-shrink-0" onError={(e) => e.target.src = 'https://placehold.co/28x28/232733/6b7280?text=T'} />) : (<div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: '#232733' }}><MdSportsBasketball size={14} className="text-orange-500" /></div>)}
+                        <span className="text-white text-sm font-medium truncate">{awayName}</span>
+                    </div>
+                    <div className="flex-shrink-0 ml-3">
+                        <span className="text-white text-xs font-semibold px-3.5 py-1.5 rounded-md inline-flex items-center gap-1" style={{ backgroundColor: isLive ? '#dc2626' : '#f97316' }}>
+                            <MdPlayArrow size={14} /> {isLive ? 'Live' : 'Tonton'}
+                        </span>
                     </div>
                 </div>
             </div>
@@ -322,29 +383,19 @@ function MatchCard({ match, isLive, isFinished = false }) {
 function ChannelCard({ channel }) {
     const { id, name, category, provider } = channel;
     const channelProvider = provider || 'sphere';
-
     return (
         <Link href={`/basketball/${id}?provider=${channelProvider}`}>
-            <div className="rounded-lg overflow-hidden transition-all cursor-pointer group border border-transparent"
-                style={{ backgroundColor: '#1a1d27' }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#1e2130'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#1a1d27'}>
+            <div className="rounded-lg overflow-hidden transition-all cursor-pointer group border border-transparent" style={{ backgroundColor: '#1a1d27' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#1e2130'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#1a1d27'}>
                 <div className="flex justify-between items-center px-4 py-2 text-xs" style={{ backgroundColor: '#151720' }}>
                     <span className="font-medium text-blue-400 flex items-center gap-1.5"><MdLiveTv size={12} /> Extra Channel</span>
-                    <span className="text-gray-500 truncate max-w-[180px] flex items-center gap-1.5">
-                        <MdSportsBasketball size={12} className="text-orange-500" /> {category || 'Basketball'}
-                    </span>
+                    <span className="text-gray-500 truncate max-w-[180px] flex items-center gap-1.5"><MdSportsBasketball size={12} className="text-orange-500" /> {category || 'Basketball'}</span>
                 </div>
                 <div className="flex items-center justify-between px-4 py-3 gap-2">
                     <div className="flex items-center gap-3 flex-1 min-w-0">
-                        <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: '#232733' }}>
-                            <MdSportsBasketball size={14} className="text-orange-500" />
-                        </div>
+                        <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: '#232733' }}><MdSportsBasketball size={14} className="text-orange-500" /></div>
                         <span className="text-white text-sm font-medium truncate">{name || 'Channel'}</span>
                     </div>
-                    <span className="text-white text-xs font-semibold px-3.5 py-1.5 rounded-md inline-flex items-center gap-1 flex-shrink-0" style={{ backgroundColor: '#f97316' }}>
-                        <MdPlayArrow size={14} /> Tonton
-                    </span>
+                    <span className="text-white text-xs font-semibold px-3.5 py-1.5 rounded-md inline-flex items-center gap-1 flex-shrink-0" style={{ backgroundColor: '#f97316' }}><MdPlayArrow size={14} /> Tonton</span>
                 </div>
             </div>
         </Link>

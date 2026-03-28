@@ -76,7 +76,7 @@ const SPORT_CATEGORIES = [
     { name: 'Motorsport', icon: MdSportsMotorsports, color: '#ef4444', href: '/motorsport' },
     { name: 'NHL Hockey', icon: MdSportsHockey, color: '#06b6d4', href: '/hockey' },
     { name: 'NFL', icon: MdSportsFootball, color: '#854d0e', href: '/sports/nfl' },
-    { name: 'MLB Baseball', icon: MdSportsBaseball, color: '#e11d48', href: '/sports/mlb' },
+    { name: 'MLB Baseball', icon: MdSportsBaseball, color: '#e11d48', href: '/baseball' },
     { name: 'UFC / Boxing', icon: MdSportsMma, color: '#dc2626', href: '/sports/ppv' },
 ];
 
