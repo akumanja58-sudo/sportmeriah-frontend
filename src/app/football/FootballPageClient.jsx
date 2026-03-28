@@ -422,7 +422,7 @@ function BohoMatchCard({ match, isLive }) {
     const awayName = match.teams?.away?.name || match.title?.split(' vs ')[1] || 'Away';
     const homeBadge = match.teams?.home?.badge || '';
     const awayBadge = match.teams?.away?.badge || '';
-    const matchUrl = `/football/boho/${match.id}`;
+    const matchUrl = `/football/boho/${match.id}?sport=football`;
 
     return (
         <Link href={matchUrl}>

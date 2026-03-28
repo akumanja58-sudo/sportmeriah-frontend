@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Navbar from '../../../components/Navbar';
-
+import { useSearchParams } from 'next/navigation';
 import { FaTelegram, FaWhatsapp, FaFacebook, FaTwitter } from 'react-icons/fa';
 import { IoHome } from 'react-icons/io5';
 import { MdSportsSoccer, MdSportsBasketball, MdPlayArrow, MdShare, MdContentCopy, MdCheck, MdArrowBack } from 'react-icons/md';
@@ -24,6 +24,9 @@ export default function BohoPlayerClient({ matchId }) {
     const [countdown, setCountdown] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
 
     const countdownRef = useRef(null);
+    const searchParams = useSearchParams();
+
+    const [showAdNotice, setShowAdNotice] = useState(true);
 
     useEffect(() => {
         fetchMatchDetail();
@@ -35,7 +38,8 @@ export default function BohoPlayerClient({ matchId }) {
     const fetchMatchDetail = async () => {
         try {
             setError(null);
-            const res = await fetch(`${BOHO_API}?action=detail&id=${encodeURIComponent(matchId)}&sport=football`);
+            const sportParam = searchParams?.get('sport') || 'football';
+            const res = await fetch(`${BOHO_API}?action=detail&id=${encodeURIComponent(matchId)}&sport=${sportParam}`);
             const data = await res.json();
 
             if (data?.data) {
@@ -103,6 +107,8 @@ export default function BohoPlayerClient({ matchId }) {
         setIframeUrl(source.proxyUrl);
         setIsPlaying(true);
         setActiveServer(source);
+        setShowAdNotice(true);
+        setTimeout(() => setShowAdNotice(false), 8000);
     };
 
     const refreshStream = () => {
@@ -192,6 +198,15 @@ export default function BohoPlayerClient({ matchId }) {
                                 allow="autoplay; encrypted-media; fullscreen"
                                 allowFullScreen
                             />
+                            {showAdNotice && (
+                                <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 animate-pulse">
+                                    <div className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-medium text-amber-300 backdrop-blur-sm" style={{ backgroundColor: 'rgba(0,0,0,0.8)', border: '1px solid rgba(251,191,36,0.3)' }}>
+                                        <span>⚠️</span>
+                                        <span>Klik pertama mungkin membuka tab iklan — tutup tab tersebut dan klik play lagi</span>
+                                        <button onClick={(e) => { e.stopPropagation(); setShowAdNotice(false); }} className="ml-2 text-gray-500 hover:text-white">✕</button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     ) : isLive && sources.length > 0 ? (
                         <div className="rounded-xl w-full overflow-hidden min-h-[350px] sm:min-h-[400px] md:aspect-video relative" style={{ backgroundColor: '#111318' }}>
